@@ -1,165 +1,55 @@
-import random
-import os
+import random, os
 from flask import Flask, render_template_string, request, jsonify
-
 app = Flask(__name__)
+db = {"bal": 1000.0, "msg": "राशि डालें और रंग चुनें!", "hist": ["Red", "Green"], "color": None, "bet_amt": 0.0, "pid": 101}
 
-# ग्लोबल डेटाबेस स्टेट
-db = {
-    "user": "admin",
-    "bal": 1000.0,
-    "msg": "अपनी बेट राशि दर्ज करें और प्रेडिक्शन चुनें!",
-    "hist": ["Red", "Green", "Violet", "Green", "Red"],
-    "color": None,
-    "bet_amt": 0.0,
-    "pid": 2026083001
-}
-
-# कंबाइंड प्रीमियम फ्रंटエンド सिस्टम (लॉगिन -> डैशबोर्ड -> गेम)
-html_code = """
-<!DOCTYPE html>
-<html lang="hi">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>51Game Premium Platform</title>
-    <style>
-        * { margin:0; padding:0; box-sizing:border-box; font-family:sans-serif; }
-        body { background:#1a1a24; color:#fff; display:flex; justify-content:center; padding:15px; }
-        .box { width:100%; max-width:430px; background:#222232; border-radius:20px; padding:20px; text-align:center; min-height:85vh; }
-        .card { background:linear-gradient(135deg, #2b5876, #4e4376); border-radius:15px; padding:20px; margin:15px 0; }
-        input { width:100%; padding:12px; background:rgba(255,255,255,0.08); border:1px solid #3a3a52; border-radius:8px; color:#fff; margin-bottom:15px; outline:none; text-align:center; font-size:16px; }
-        button { width:100%; padding:12px; background:linear-gradient(90deg, #ff416c, #ff4b2b); border:none; border-radius:8px; color:#fff; font-weight:bold; cursor:pointer; }
-        .grid { display:grid; grid-template-columns:1fr 1fr; gap:15px; margin-top:20px; }
-        .g-card { background:#1f1f1f; padding:20px; border-radius:10px; border:1px solid #333; text-align:center; cursor:pointer; }
-        .play-btn { background:#ff4b2b; color:#fff; font-size:12px; padding:6px 12px; border-radius:5px; display:inline-block; margin-top:10px; font-weight:bold; }
-        .c-btns { display:flex; gap:10px; margin-bottom:15px; }
-        .cb { flex:1; padding:12px 5px; border:none; border-radius:10px; font-weight:bold; color:#fff; font-size:15px; }
-        .bg { background:#00b0ff; } .bv { background:#9c27b0; } .br { background:#ff3b30; }
-        .cb:disabled { background:#555 !important; cursor:not-allowed; opacity:0.6; }
-        .status { background:#1a1a24; padding:12px; border-radius:12px; margin-bottom:15px; border-left:4px solid #ffdf00; font-size:14px; text-align:left; }
-        .dots { display:flex; gap:8px; justify-content:center; margin-top:8px; }
-        .dot { width:32px; height:32px; border-radius:50%; display:flex; justify-content:center; align-items:center; font-size:10px; font-weight:bold; }
-        .dot-Green { background:#00b0ff; } .dot-Red { background:#ff3b30; } .dot-Violet { background:#9c27b0; }
-    </style>
-</head><body>
-
-<!-- १. लॉगिन स्क्रीन -->
+html = """
+<!DOCTYPE html><html><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width, initial-scale=1.0"><title>51Game</title>
+<style>
+    body { background:#1a1a24; color:#fff; font-family:sans-serif; text-align:center; padding:15px; }
+    .box { width:100%; max-width:400px; background:#222232; border-radius:15px; padding:20px; margin:auto; }
+    input { width:100%; padding:10px; background:rgba(255,255,255,0.1); border:none; border-radius:8px; color:#fff; margin-bottom:15px; text-align:center; }
+    button { width:100%; padding:12px; background:linear-gradient(90deg, #ff416c, #ff4b2b); border:none; border-radius:8px; color:#fff; font-weight:bold; cursor:pointer; }
+    .card { background:linear-gradient(135deg, #2b5876, #4e4376); border-radius:12px; padding:15px; margin:15px 0; }
+    .cb { padding:10px; border:none; border-radius:8px; font-weight:bold; color:#fff; margin:4px; width:28%; }
+    .bg { background:#00b0ff; } .bv { background:#9c27b0; } .br { background:#ff3b30; }
+    .dot { display:inline-block; width:40px; padding:5px; margin:3px; border-radius:5px; font-weight:bold; background:#555; }
+</style></head><body>
 <div id="p-login" class="box">
-    <br><h2>👑 51Game Login</h2><br><br>
+    <h2>👑 51Game Login</h2><br>
     <input type="text" id="u" placeholder="Username (admin)">
     <input type="password" id="p" placeholder="Password (1245)">
-    <button onclick="doLogin()">SECURE LOGIN</button>
+    <button onclick="if(u.value=='admin'&&p.value=='1245'){pLogin.style.display='none';pDash.style.display='block';}else{alert('Wrong!');}">LOGIN</button>
 </div>
-
-<!-- २. मुख्य डैशबोर्ड स्क्रीन -->
 <div id="p-dash" class="box" style="display:none;">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-        <h3>ID: admin ✨</h3><span onclick="logout()" style="color:#ff3b30; cursor:pointer; font-weight:bold; font-size:14px;">Logout</span>
-    </div>
-    <div class="card">
-        <h3>AVAILABLE BALANCE</h3>
-        <p id="d-bal" style="font-size:32px; font-weight:bold; margin-top:5px; color:#ffdf00;">₹ 1000.00</p>
-        <button onclick="deposit()" style="background:#ffdf00; color:#000; width:auto; padding:6px 15px; border-radius:20px; margin-top:10px; font-weight:bold; border:none; cursor:pointer;">💰 Quick Deposit (+₹500)</button>
-    </div>
-    <h3 style="text-align:left; color:#ff416c; margin-top:20px;">🎯 Popular Games</h3>
-    <div class="grid">
-        <div class="g-card" onclick="goGame()">
-            <h4>Win Go</h4><p style="font-size:11px; color:#aaa;">Color Prediction 1M</p>
-            <span class="play-btn">Play Now</span>
-        </div>
-        <div class="g-card" style="opacity:0.5; cursor:not-allowed;">
-            <h4>Aviator</h4><p style="font-size:11px; color:#aaa;">Crash Game</p>
-            <span class="play-btn" style="background:#555;">Locked</span>
-        </div>
-    </div>
+    <h2>Dashboard ✨</h2>
+    <div class="card"><h3>BALANCE</h3><h2 style="color:#ffdf00;">₹ <span class="b-val">1000</span></h2></div>
+    <button onclick="pDash.style.display='none';pGame.style.display='block';">🎯 Play Win Go Now</button>
 </div>
-
-<!-- ३. ऑटो-टाइमर Win Go गेम स्क्रीन -->
 <div id="p-game" class="box" style="display:none;">
-    <div style="display:flex; justify-content:space-between; align-items:center;">
-        <button onclick="goDash()" style="width:auto; padding:5px 12px; background:#ffdf00; color:#000; font-weight:bold; border:none; border-radius:5px; cursor:pointer;">⬅ Dashboard</button>
-        <span>Win Go 1Min</span>
-    </div>
-    <div class="card">
-        <h3>AVAILABLE BALANCE</h3>
-        <div id="g-bal" style="font-size:32px; font-weight:bold; margin-top:5px; color:#ffdf00;">₹ 1000.00</div>
-    </div>
-    <div style="display:flex; justify-content:space-between; background:#2a2a3e; padding:12px; border-radius:12px; margin-bottom:15px;">
-        <div style="text-align:left;"><b style="color:#00ffcc;">🎯 Auto Processing</b><br><span id="l-msg" style="font-size:11px; color:#aaa;">प्रेडिक्शन खुला है!</span></div>
-        <div id="count" style="font-size:24px; font-weight:bold; color:#00ffcc;">00:30</div>
-    </div>
-    <label style="font-size:12px; color:#aaa; display:block; text-align:left; margin-bottom:5px;">💵 अपनी बेट राशि दर्ज करें (Real Amount):</label>
-    <input type="number" id="b-amount" value="100" min="10">
-    <div class="c-btns">
-        <button id="btn-Green" onclick="bet('Green')" class="cb bg">Green (2x)</button>
-        <button id="btn-Violet" onclick="bet('Violet')" class="cb bv">Violet (3x)</button>
-        <button id="btn-Red" onclick="bet('Red')" class="cb br">Red (2x)</button>
-    </div>
-    <div class="status"><strong>Status:</strong> <span id="st-txt">राशि सेट करें और रंग चुनें।</span></div>
-    <div style="background:#2a2a3e; padding:15px; border-radius:12px;">
-        <span style="font-size:13px; color:#aaa; display:block; text-align:left; margin-bottom:5px;">📊 Recent Trends (Period: <span id="pid">2026083001</span>)</span>
-        <div class="dots" id="hist-box"></div>
-    </div>
+    <div style="display:flex; justify-content:space-between;"><button onclick="pGame.style.display='none';pDash.style.display='block';" style="width:auto; padding:5px 10px;">⬅ Back</button><span>Win Go 1Min</span></div>
+    <div class="card"><h3>BALANCE</h3><h2>₹ <span class="b-val">1000</span></h2></div>
+    <h2 id="count" style="color:#00ffcc;">00:30</h2>
+    <input type="number" id="amt" value="100"><br>
+    <button onclick="bet('Green')" class="cb bg">Green</button><button onclick="bet('Violet')" class="cb bv">Violet</button><button onclick="bet('Red')" class="cb br">Red</button>
+    <div style="margin:15px 0; background:#1a1a24; padding:10px; border-radius:8px;" id="st">Prediction Open!</div>
+    <div id="hist"></div>
 </div>
-
 <script>
-    let time = 30;
-    function show(id) { ['p-login','p-dash','p-game'].forEach(p=>document.getElementById(p).style.display=p===id?'block':'none'); }
-    function doLogin() {
-        if(document.getElementById('u').value==='admin' && document.getElementById('p').value==='1245') { show('p-dash'); } 
-        else { alert("गलत क्रेडेंशियल्स! admin और 1245 दर्ज करें।"); }
+    let time = 30, pLogin=document.getElementById('p-login'), pDash=document.getElementById('p-dash'), pGame=document.getElementById('p-game'), u=document.getElementById('u'), p=document.getElementById('p');
+    function bet(c) {
+        if(time<=5) return;
+        fetch('/api', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({a:'bet', c:c, amt:document.getElementById('amt').value})})
+        .then(r=>r.json()).then(d=>{ if(d.status=='ok'){ update(d); st.innerText="Bet locked on "+c; } else { alert(d.msg); } });
     }
-    function goGame() { show('p-game'); updateHistory(); }
-    function goDash() { show('p-dash'); }
-    function logout() { show('p-login'); document.getElementById('u').value=''; document.getElementById('p').value=''; }
-    
-    function deposit() {
-        fetch('/api/action', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'deposit'})})
-        .then(r=>r.json()).then(d=>{ updateUI(d); alert("₹500 जमा हो गए!"); });
-    }
-    function bet(color) {
-        if(time <= 5) return;
-        let amt = parseFloat(document.getElementById('b-amount').value);
-        if(isNaN(amt) || amt <= 0) { alert("कृपया सही राशि दर्ज करें!"); return; }
-        fetch('/api/action', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'bet', color:color, amount:amt})})
-        .then(r=>r.json()).then(d=>{
-            if(d.status==='success'){ updateUI(d); document.getElementById('st-txt').innerText="आपने " + color + " पर ₹" + amt + " की बेट लॉक कर दी है।"; }
-            else { alert(d.msg); }
-        });
-    }
-    function updateUI(d) {
-        document.getElementById('d-bal').innerText = "₹ " + d.bal.toFixed(2);
-        document.getElementById('g-bal').innerText = "₹ " + d.bal.toFixed(2);
-    }
-    function updateHistory() {
-        fetch('/api/action', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'get_state'})})
-        .then(r=>r.json()).then(d=>{
-            document.getElementById('pid').innerText = d.pid;
-            let hHtml = ""; d.hist.forEach(c=>{ hHtml += `<div class="dot dot-${c}">${c}</div>`; });
-            document.getElementById('hist-box').innerHTML = hHtml;
-        });
-    }
-
+    function update(d) { document.querySelectorAll('.b-val').forEach(e=>e.innerText=d.bal.toFixed(2)); }
     setInterval(() => {
-        time--;
-        if(time < 0) {
-            time = 30;
-            ['Green','Violet','Red'].forEach(c=>document.getElementById('btn-'+c).disabled=false);
-            document.getElementById('b-amount').disabled = false;
-            document.getElementById('l-msg').innerText = "प्रेडिक्शन खुला है!";
-            document.getElementById('count').style.color = '#00ffcc';
-        }
-        document.getElementById('count').innerText = `00:${time<10?'0'+time:time}`;
-        if(time <= 5 && time > 0) {
-            ['Green','Violet','Red'].forEach(c=>document.getElementById('btn-'+c).disabled=true);
-            document.getElementById('b-amount').disabled = true;
-            document.getElementById('l-msg').innerText = "🛑 बेटिंग बंद (Locked)!";
-            document.getElementById('count').style.color = '#ff3b30';
-        }
-        if(time === 0) {
-            fetch('/api/action', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({action:'result'})})
-            .then(r=>r.json()).then(d=>{ updateUI(d); document.getElementById('st-txt').innerText = d.msg; updateHistory(); });
+        time--; if(time<0) time=30;
+        count.innerText = `00:${time<10?'0'+time:time}`;
+        if(time<=5) st.innerText = "🛑 Locked!";
+        if(time===0) {
+            fetch('/api', {method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify({a:'res'})})
+            .then(r=>r.json()).then(d=>{ update(d); st.innerText=d.msg; });
         }
     }, 1000);
 </script>
@@ -167,17 +57,29 @@ html_code = """
 """
 
 @app.route('/')
-def home(): 
-    return render_template_string(html_code)
+def home(): return render_template_string(html, db=db)
 
-@app.route('/api/action', methods=['POST'])
-def api_action():
-    act = request.json.get('action')
-    if act == 'get_state': return jsonify(db)
-    if act == 'deposit':
-        db["bal"] += 500.0
-        return jsonify({"bal": db["bal"]})
+@app.route('/api', methods=['POST'])
+def api():
+    req = request.json; act = req.get('a')
     if act == 'bet':
-        amt = float(request.json.get('amount', 100.0))
+        amt = float(req.get('amt'))
         if db["bal"] >= amt:
-            
+            db["bal"] -= amt; db["color"] = req.get('c'); db["bet_amt"] = amt
+            return jsonify({"status": "ok", "bal": db["bal"]})
+        return jsonify({"status": "err", "msg": "Low Balance!"})
+    if act == 'res':
+        win = random.choice(["Green", "Red", "Violet", "Green", "Red"])
+        if db["color"]:
+            m = 3.0 if win == "Violet" else 2.0
+            if db["color"] == win:
+                pz = db["bet_amt"] * m; db["bal"] += pz
+                db["msg"] = f"🎉 Won! Winner is {win}. +₹{pz}"
+            else: db["msg"] = f"😢 Lost! Winner was {win}."
+        else: db["msg"] = f"Round end. Winner: {win}"
+        db["color"] = None; db["bet_amt"] = 0.0
+        return jsonify({"bal": db["bal"], "msg": db["msg"]})
+
+if __name__ == '__main__':
+    app.run(host='0.0.0.0', port=int(os.environ.get("PORT", 5000)))
+        
