@@ -1,72 +1,113 @@
 import random
 import time
 
-def start_wingo_game():
-    print("--- 91 Club स्टाइल Wingo गेम सिम्युलेटर में आपका स्वागत है ---")
-    balance = 1000  # शुरुआती वर्चुअल बैलेंस
-    
-    colors = {
-        'Red': [2, 4, 6, 8],
-        'Green': [1, 3, 7, 9],
-        'Violet': [0, 5]
-    }
-    
-    while balance > 0:
-        print(f"\nआपका वर्तमान बैलेंस: ₹{balance}")
-        print("चुनें: [1] Green  [2] Red  [3] Violet")
-        
-        choice = input("अपना विकल्प चुनें (1/2/3) या बाहर निकलने के लिए 'q' दबाएं: ")
-        if choice.lower() == 'q':
-            print("खेलने के लिए धन्यवाद!")
-            break
-            
-        if choice not in ['1', '2', '3']:
-            print("अवैध विकल्प! कृपया सही नंबर चुनें।")
-            continue
-            
-        try:
-            bet_amount = int(input("अपनी बेट राशि दर्ज करें (₹): "))
-            if bet_amount > balance or bet_amount <= 0:
-                print("अमान्य राशि या अपर्याप्त बैलेंस!")
-                continue
-        except ValueError:
-            print("कृपया केवल नंबर दर्ज करें।")
-            continue
-            
-        # प्रेडिक्शन का मिलान सेट करना
-        predicted_color = 'Green' if choice == '1' else 'Red' if choice == '2' else 'Violet'
-        
-        print("\nलॉटरी परिणाम आ रहा है... (3 सेकंड रुकें)")
-        time.sleep(3)
-        
-        # 0 से 9 के बीच रैंडम नंबर जनरेट करना
-        winning_number = random.randint(0, 9)
-        winning_color = ""
-        
-        for color, numbers in colors.items():
-            if winning_number in numbers:
-                winning_color = color
-                
-        print(f"➜ परिणाम संख्या: {winning_number} ({winning_color})")
-        
-        # जीत या हार का फैसला
-        if predicted_color == winning_color:
-            if winning_color == 'Violet':
-                win_multiplier = 4.5  # वायलेट के लिए ज्यादा रिवॉर्ड
-            else:
-                win_multiplier = 2.0
-                
-            winnings = int(bet_amount * win_multiplier)
-            balance += (winnings - bet_amount)
-            print(f"🎉 बधाई हो! आप जीत गए। आपको मिले: ₹{winnings}")
-        else:
-            balance -= bet_amount
-            print("❌ ओहो! आपका अनुमान गलत था। आप यह बेट हार गए।")
-            
-    if balance <= 0:
-        print("\nआपका बैलेंस खत्म हो गया है! गेम समाप्त।")
+class ColorPredictionGame:
+    def __init__(self, initial_balance=1000):
+        self.balance = initial_balance
+        self.game_history = []
+        self.colors = ["Green", "Red", "Violet"]
 
-# गेम शुरू करने के लिए रन करें
+    def display_status(self):
+        print("\n" + "="*40)
+        print(f"💰 Current Balance: ₹{self.balance}")
+        print("="*40)
+
+    def get_system_outcome(self):
+        """
+        Simulates realistic 51 Game probabilities:
+        Green: ~45% | Red: ~45% | Violet: ~10%
+        """
+        rand_val = random.random()
+        if rand_val < 0.45:
+            return "Green"
+        elif rand_val < 0.90:
+            return "Red"
+        else:
+            return "Violet"
+
+    def play_round(self):
+        self.display_status()
+        
+        # Step 1: Input Bet Amount
+        try:
+            bet_amount = int(input("Enter Bet Amount (Min ₹10): "))
+            if bet_amount < 10:
+                print("❌ Minimum bet amount is ₹10!")
+                return
+            if bet_amount > self.balance:
+                print("❌ Insufficient balance for this bet!")
+                return
+        except ValueError:
+            print("❌ Invalid input! Please enter a valid number.")
+            return
+
+        # Step 2: Input Color Choice
+        print("\nChoose your Color:")
+        print("1. Green (2x Return)")
+        print("2. Red (2x Return)")
+        print("3. Violet (4.5x Return)")
+        choice = input("Enter choice (1/2/3 or Name): ").strip().title()
+
+        # Map number choices to colors
+        choice_map = {"1": "Green", "2": "Red", "3": "Violet"}
+        player_choice = choice_map.get(choice, choice)
+
+        if player_choice not in self.colors:
+            print("❌ Invalid color selection!")
+            return
+
+        # Deduct bet money
+        self.balance -= bet_amount
+        print(f"\n🎰 Placing ₹{bet_amount} on {player_choice}...")
+        print("Waiting for game timer countdown...")
+        time.sleep(1.5)  # Simulates game processing delay
+
+        # Step 3: Draw Result
+        winning_color = self.get_system_outcome()
+        print(f"🎲 Result Color is: {winning_color}")
+
+        # Step 4: Calculate Payouts
+        if player_choice == winning_color:
+            if winning_color == "Violet":
+                winnings = int(bet_amount * 4.5)
+            else:
+                winnings = bet_amount * 2
+            
+            self.balance += winnings
+            print(f"🎉 Congratulations! You WON ₹{winnings}!")
+        else:
+            print("😞 You LOST this round! Better luck next time.")
+
+        # Save to Game History
+        self.game_history.append({"bet": bet_amount, "chosen": player_choice, "result": winning_color})
+
+    def show_history(self):
+        if not self.game_history:
+            print("\n📜 No history available yet.")
+            return
+        print("\n📜 --- GAME HISTORY ---")
+        for idx, record in enumerate(self.game_history[-5:], 1):  # Shows last 5 games
+            print(f"Game {idx}: Bet ₹{record['bet']} on {record['chosen']} -> Result: {record['result']}")
+
+# --- Main Game Loop ---
 if __name__ == "__main__":
-    start_wingo_game()
-    
+    print("Welcome to 51 Game (Color Prediction Server Simulator)")
+    game = ColorPredictionGame(initial_balance=1000)
+
+    while True:
+        print("\n[1] Play Game  |  [2] View History  |  [3] Exit")
+        main_choice = input("Select an option: ").strip()
+
+        if main_choice == "1":
+            game.play_round()
+            if game.balance < 10:
+                print("\n💥 Game Over! You don't have enough money to place a minimum bet.")
+                break
+        elif main_choice == "2":
+            game.show_history()
+        elif main_choice == "3":
+            print("\nThank you for playing! Exiting...")
+            break
+        else:
+            print("❌ Invalid option. Choose 1, 2, or 3.")
+            
