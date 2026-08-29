@@ -2,7 +2,6 @@ import os
 import time
 from selenium import webdriver
 from selenium.webdriver.chrome.options import Options
-from selenium.webdriver.chrome.service import Service
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
@@ -10,108 +9,81 @@ from selenium.webdriver.support.ui import WebDriverWait
 
 def run_full_automation():
     chrome_options = Options()
-    chrome_options.add_argument("--headless")  # बिना स्क्रीन के बैकग्राउंड में चलाने के लिए
-    chrome_options.add_argument("--no-sandbox")  # सर्वर पर परमिशन एरर से बचने के लिए
-    chrome_options.add_argument("--disable-dev-shm-usage")  # कम मेमोरी क्रैश से बचने के लिए
+    chrome_options.add_argument("--headless")
+    chrome_options.add_argument("--no-sandbox")
+    chrome_options.add_argument("--disable-dev-shm-usage")
     chrome_options.add_argument("--window-size=1920,1080")
 
-    # रेंडर क्लाउड सर्वर पर क्रोम और ड्राइवर का पाथ (रास्ता)
-    chrome_options.binary_location = (
-        "/opt/render/project/.render/chrome/chrome"
-    )
-    chrome_service = Service(
-        executable_path="/opt/render/project/.render/chromedriver/chromedriver"
-    )
-
-    print("🚀 रेंडर क्लाउड पर क्रोम शुरू हो रहा है...")
-    driver = webdriver.Chrome(service=chrome_service, options=chrome_options)
+    print("🚀 ब्राउज़र शुरू हो रहा है...")
+    driver = webdriver.Chrome(options=chrome_options)
     wait = WebDriverWait(driver, 15)
 
     try:
-        # ========================================================
-        # चरण 1: लॉगिन प्रक्रिया (जो स्क्रीनशॉट 1 में था)
-        # ========================================================
+        # --- चरण 1: लॉगिन प्रक्रिया ---
         print("🔗 लॉगिन पेज पर जा रहे हैं...")
         driver.get("https://51gameq.com")
         time.sleep(5)
 
-        print("📝 मोबाइल और पासवर्ड इनपुट बॉक्स ढूंढ रहे हैं...")
         phone_input = wait.until(
             EC.presence_of_element_located((By.NAME, "phone"))
         )
         password_input = driver.find_element(By.NAME, "password")
 
-        # ⚠️ यहाँ अपना असली नंबर और पासवर्ड बदलें
+        # ⚠️ अपनी डिटेल्स यहाँ डालें
         phone_input.send_keys("YOUR_PHONE_NUMBER")
         password_input.send_keys("YOUR_PASSWORD")
 
-        # लॉगिन बटन पर क्लिक करें
         login_button = driver.find_element(
             By.XPATH, "//button[contains(text(), 'Login')]"
         )
         login_button.click()
-        print("✅ लॉगिन बटन पर क्लिक किया गया।")
+        print("✅ लॉगिन सफल रहा!")
         time.sleep(6)
 
-        # ========================================================
-        # चरण 2: मुख्य होम पेज पर जाना
-        # ========================================================
-        print("🏠 मुख्य होम पेज लोड हो रहा है...")
-        driver.get("https://51gameq.com")
-        time.sleep(5)
-
-        # ========================================================
-        # चरण 3: WinGo गेम पेज (जो स्क्रीनशॉट 2 में था)
-        # ========================================================
+        # --- चरण 2: गेम पेज पर जाना ---
         print("🎮 WinGo गेम पेज पर जा रहे हैं...")
-        driver.get("https://51gameq.comsaasl...")  # ⚠️ यहाँ अपनी सही गेम URL डालें
+        driver.get("https://51gameq.com...")  # ⚠️ अपनी सही गेम URL डालें
         time.sleep(5)
 
-        # टाइमर बॉक्स का टेक्स्ट पढ़ें (Time remaining)
-        try:
-            timer_element = driver.find_element(
-                By.XPATH, "//div[contains(@class, 'Time remaining')]"
-            )
-            print(f"⏱️ वर्तमान टाइमर स्थिति: {timer_element.text}")
-        except Exception:
-            print("⚠️ टाइमर एलिमेंट पेज पर नहीं मिला।")
-
-        # ========================================================
-        # चरण 4: गेम इतिहास (Game History) का डेटा निकालना (जो स्क्रीनशॉट 3 में था)
-        # ========================================================
-        print("\n📊 गेम इतिहास डेटा निकाला जा रहा है...")
-
-        # टेबल की सभी कतारों (Rows) को ढूंढें
-        rows = driver.find_elements(
-            By.XPATH, "//div[contains(@class, 'Game history')]//table//tr"
-        )
-
-        for row in rows:
+        # --- चरण 3: लगातार डेटा निकालने के लिए लूप (Loop) ---
+        print("📊 लगातार डेटा मॉनिटरिंग शुरू की जा रही है...")
+        while True:
             try:
-                # रो के अंदर मौजूद सभी कॉलम्स (td) को ढूंढें
-                cols = row.find_elements(By.TAG_NAME, "td")
-
-                if len(cols) >= 4:
-                    period = cols[0].text  # पीरियड नंबर (जैसे: 20260829100052662)
-                    number = cols[1].text  # नंबर (जैसे: 8)
-                    big_small = cols[2].text  # बिग या स्मॉल (जैसे: Big)
-                    color = cols[3].text  # कलर का नाम
-
-                    print(
-                        f"🔹 Period: {period} | Number: {number} | Result: {big_small} | Color: {color}"
+                # टाइमर की स्थिति पढ़ें
+                try:
+                    timer_element = driver.find_element(
+                        By.XPATH, "//div[contains(@class, 'Time remaining')]"
                     )
-            except Exception:
-                continue
+                    print(f"⏱️ टाइमर: {timer_element.text}")
+                except Exception:
+                    pass
+
+                # गेम इतिहास का डेटा निकालें
+                rows = driver.find_elements(
+                    By.XPATH,
+                    "//div[contains(@class, 'Game history')]//table//tr",
+                )
+                for row in rows:
+                    cols = row.find_elements(By.TAG_NAME, "td")
+                    if len(cols) >= 4:
+                        print(
+                            f"🔹 Period: {cols.text} | Number: {cols.text} | Size: {cols.text}"
+                        )
+
+                # सर्वर को एक्टिव रखने और अगले अपडेट के लिए 10 सेकंड रुकें
+                time.sleep(10)
+
+            except Exception as loop_error:
+                print(f"लूप के अंदर एरर आया: {loop_error}")
+                time.sleep(5)
 
     except Exception as e:
-        print(f"❌ ऑटोमेशन के दौरान त्रुटि आई: {e}")
-
+        print(f"❌ मुख्य ऑटोमेशन में एरर आया: {e}")
     finally:
-        # काम पूरा होने के बाद ब्राउज़र बंद करें
-        print("🛑 काम पूरा हुआ, ब्राउज़र बंद किया जा रहा है...")
+        print("🛑 ब्राउज़र बंद हो रहा है...")
         driver.quit()
 
 
 if __name__ == "__main__":
     run_full_automation()
-                    
+    
