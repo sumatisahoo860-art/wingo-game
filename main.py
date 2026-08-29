@@ -1,165 +1,117 @@
-from flask import Flask, request, redirect, session, render_template_string
-import random
-
-app = Flask(__name__)
-app.secret_key = "demo-secret-key"
-
-DEMO_ID = "demo123"
-DEMO_PASSWORD = "1234"
-
-period = 100001
-history = []
-
-HTML = """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Demo Colour Game</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body {
-            font-family: Arial;
-            background: #f2f2f2;
-            text-align: center;
-            padding: 25px;
-        }
-        .box {
-            max-width: 400px;
-            margin: auto;
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-        }
-        input, button {
-            width: 90%;
-            padding: 12px;
-            margin: 8px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-        }
-        button {
-            cursor: pointer;
-            font-weight: bold;
-        }
-        .history {
-            text-align: left;
-            font-size: 13px;
-        }
-    </style>
-</head>
-<body>
-<div class="box">
-
-{% if page == "login" %}
-
-<h1>Demo Login</h1>
-
-<form method="POST">
-    <input name="user_id" placeholder="Login ID" required>
-    <input name="password" type="password" placeholder="Password" required>
-    <button type="submit">LOGIN</button>
-</form>
-
-<p>Demo ID: <b>demo123</b></p>
-<p>Password: <b>1234</b></p>
-
-{% else %}
-
-<h1>Colour Game</h1>
-
-<h3>Period Number: {{ period }}</h3>
-
-<form method="POST" action="/play">
-    <button name="color" value="RED">RED</button>
-    <button name="color" value="GREEN">GREEN</button>
-    <button name="color" value="VIOLET">VIOLET</button>
-</form>
-
-{% if result %}
-<h2>Result: {{ result }}</h2>
-<p>{{ status }}</p>
-{% endif %}
-
-<hr>
-
-<h3>History</h3>
-
-<div class="history">
-{% for item in history %}
-<p>{{ item }}</p>
-{% endfor %}
-</div>
-
-<p>DEMO ONLY — No real money</p>
-
-{% endif %}
-
-</div>
-</body>
-</html>
-"""
-
-@app.route("/", methods=["GET", "POST"])
-def login():
-    if request.method == "POST":
-        user_id = request.form.get("user_id")
-        password = request.form.get("password")
-
-        if user_id == DEMO_ID and password == DEMO_PASSWORD:
-            session["login"] = True
-            return redirect("/game")
-
-        return "Login Failed. Use demo123 / 1234"
-
-    return render_template_string(HTML, page="login")
+import time
+from selenium import webdriver
+from selenium.webdriver.common.by import By
+from selenium.webdriver.support import expected_conditions as EC
+from selenium.webdriver.support.ui import WebDriverWait
 
 
-@app.route("/game")
-def game():
-    if not session.get("login"):
-        return redirect("/")
+def run_full_automation():
+    # 1. ब्राउज़र शुरू करें
+    driver = webdriver.Chrome()
+    driver.maximize_window()
+    wait = WebDriverWait(driver, 10)
 
-    return render_template_string(
-        HTML,
-        page="game",
-        period=period,
-        history=history,
-        result=None,
-        status=""
-    )
+    try:
+        # ========================================================
+        # चरण 1: लॉगिन प्रक्रिया
+        # ========================================================
+        print("लॉगिन पेज पर जा रहे हैं...")
+        driver.get("https://51gameq.com")  # अपनी सही लॉगिन URL डालें
+        time.sleep(3)
 
+        # मोबाइल और पासवर्ड इनपुट बॉक्स ढूंढें (Xpath को अपनी आवश्यकतानुसार बदलें)
+        phone_input = wait.until(
+            EC.presence_of_element_input((By.NAME, "phone"))
+        )
+        password_input = driver.find_element(By.NAME, "password")
 
-@app.route("/play", methods=["POST"])
-def play():
-    global period
+        # अपनी क्रेडेंशियल डालें
+        phone_input.send_keys("YOUR_PHONE_NUMBER")
+        password_input.send_keys("YOUR_PASSWORD")
 
-    if not session.get("login"):
-        return redirect("/")
+        # लॉगिन बटन पर क्लिक करें
+        login_button = driver.find_element(
+            By.XPATH, "//button[contains(text(), 'Login')]"
+        )
+        login_button.click()
+        print("लॉगिन बटन पर क्लिक किया गया।")
 
-    selected = request.form.get("color")
-    result = random.choice(["RED", "GREEN", "VIOLET"])
+        # लॉगिन पूरा होने और होम पेज लोड होने के लिए रुकें
+        time.sleep(5)
 
-    status = "WIN" if selected == result else "LOSS"
+        # ========================================================
+        # चरण 2: गेम पेज (WinGo) पर नेविगेट करना
+        # ========================================================
+        print("गेम पेज पर रीडायरेक्ट हो रहे हैं...")
+        # आप सीधे गेम का URL डाल सकते हैं या होम पेज से WinGo बटन पर क्लिक करा सकते हैं
+        driver.get("https://51gameq.com...")  # अपनी सही गेम URL डालें
+        time.sleep(5)
 
-    history.insert(
-        0,
-        f"Period {period} | Selected: {selected} | Result: {result} | {status}"
-    )
+        # ========================================================
+        # चरण 3: टाइमर और मुख्य एलिमेंट्स की जांच
+        # ========================================================
+        try:
+            # टाइमर बॉक्स का टेक्स्ट पढ़ें (Time remaining)
+            timer_element = driver.find_element(
+                By.XPATH, "//div[contains(@class, 'Time remaining')]"
+            )
+            print(f"वर्तमान टाइमर स्थिति: {timer_element.text}")
+        except Exception:
+            print("टाइमर एलिमेंट नहीं मिला।")
 
-    period += 1
+        # ========================================================
+        # चरण 4: गेम इतिहास (Game History) टेबल का डेटा निकालना
+        # ========================================================
+        print("\n--- गेम इतिहास डेटा निकाला जा रहा है ---")
 
-    return render_template_string(
-        HTML,
-        page="game",
-        period=period,
-        history=history[:10],
-        result=result,
-        status=status
-    )
+        # टेबल की सभी कतारों (Rows) को ढूंढें
+        # नोट: वेबसाइट के वास्तविक HTML स्ट्रक्चर के अनुसार यह Xpath बदलना पड़ सकता है
+        rows = driver.find_elements(
+            By.XPATH, "//div[contains(@class, 'Game history')]//table//tr"
+        )
+
+        game_records = []
+
+        for row in rows:
+            try:
+                # प्रत्येक रो के अंदर मौजूद सभी कॉलम्स (td) को ढूंढें
+                cols = row.find_elements(By.TAG_NAME, "td")
+
+                # सुनिश्चित करें कि रो में डेटा मौजूद है (हेडर छोड़कर)
+                if len(cols) >= 4:
+                    period = cols[0].text  # पीरियड नंबर (जैसे: 20260829100052662)
+                    number = cols[1].text  # नंबर (जैसे: 8)
+                    big_small = cols[2].text  # बिग या स्मॉल (जैसे: Big)
+                    color = cols[3].text  # कलर का नाम
+
+                    record = {
+                        "Period": period,
+                        "Number": number,
+                        "Big_Small": big_small,
+                        "Color": color,
+                    }
+                    game_records.append(record)
+
+                    print(
+                        f"Period: {period} | Number: {number} | Result: {big_small} | Color: {color}"
+                    )
+            except Exception:
+                # यदि किसी रो को पार्स करने में समस्या हो तो उसे स्किप करें
+                continue
+
+        print(
+            f"\nसफलतापूर्वक {len(game_records)} रिकॉर्ड्स इतिहास से निकाले गए।"
+        )
+
+    except Exception as global_error:
+        print(f"ऑटोमेशन के दौरान त्रुटि आई: {global_error}")
+
+    finally:
+        # 5. काम पूरा होने के बाद ब्राउज़र बंद करें
+        print("ब्राउज़र बंद किया जा रहा है...")
+        driver.quit()
 
 
 if __name__ == "__main__":
-    app.run(
-        host="0.0.0.0",
-        port=5000
-    )
+    run_full_automation()
+    
