@@ -15,7 +15,7 @@ db = {
     "pid": 2026083001
 }
 
-# कंबाइंड प्रीमियम फ्रंटएंड सिस्टम (लॉगिन -> डैशबोर्ड -> गेम)
+# कंबाइंड प्रीमियम फ्रंटエンド सिस्टम (लॉगिन -> डैशबोर्ड -> गेम)
 html_code = """
 <!DOCTYPE html>
 <html lang="hi">
@@ -52,7 +52,7 @@ html_code = """
     <button onclick="doLogin()">SECURE LOGIN</button>
 </div>
 
-<!-- २. मुख्य डैशबोर्ड स्क्रीन (गेम सिलेक्शन) -->
+<!-- २. मुख्य डैशबोर्ड स्क्रीन -->
 <div id="p-dash" class="box" style="display:none;">
     <div style="display:flex; justify-content:space-between; align-items:center;">
         <h3>ID: admin ✨</h3><span onclick="logout()" style="color:#ff3b30; cursor:pointer; font-weight:bold; font-size:14px;">Logout</span>
@@ -178,4 +178,6 @@ def api_action():
         db["bal"] += 500.0
         return jsonify({"bal": db["bal"]})
     if act == 'bet':
-        
+        amt = float(request.json.get('amount', 100.0))
+        if db["bal"] >= amt:
+            
