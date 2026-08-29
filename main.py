@@ -1,96 +1,155 @@
-from flask import Flask, render_template_string, request
+import tkinter as tk
+from tkinter import messagebox
 import random
 
-app = Flask(__name__)
+# Demo account
+DEMO_ID = "demo123"
+DEMO_PASSWORD = "1234"
 
-balance = 10000  # virtual demo points
+period = 100001
+history = []
 
-HTML = """
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Colour Prediction - Demo</title>
-    <meta name="viewport" content="width=device-width, initial-scale=1">
-    <style>
-        body {
-            font-family: Arial;
-            background: #f3f4f6;
-            text-align: center;
-            padding: 20px;
-        }
-        .box {
-            max-width: 400px;
-            margin: auto;
-            background: white;
-            padding: 25px;
-            border-radius: 18px;
-            box-shadow: 0 4px 15px #ccc;
-        }
-        button {
-            padding: 14px 25px;
-            margin: 7px;
-            border: 0;
-            border-radius: 10px;
-            color: white;
-            font-size: 17px;
-        }
-        .red { background: #e53935; }
-        .green { background: #2e9d50; }
-        .blue { background: #1976d2; }
-    </style>
-</head>
-<body>
-<div class="box">
-    <h1>Colour Demo</h1>
-    <h2>Virtual Balance: {{ balance }} points</h2>
+def login():
+    if id_entry.get() == DEMO_ID and pass_entry.get() == DEMO_PASSWORD:
+        login_frame.pack_forget()
+        game_frame.pack(fill="both", expand=True)
+        update_period()
+    else:
+        messagebox.showerror("Login Failed", "Demo ID या Password गलत है")
 
-    <form method="POST">
-        <p>Select a colour:</p>
-        <button class="red" name="colour" value="Red">Red</button>
-        <button class="green" name="colour" value="Green">Green</button>
-        <button class="blue" name="colour" value="Blue">Blue</button>
-    </form>
+def update_period():
+    period_label.config(text=f"Period Number: {period}")
 
-    {% if result %}
-        <hr>
-        <h2>Result: {{ result }}</h2>
-        <h3>{{ message }}</h3>
-    {% endif %}
+def play(color):
+    global period
 
-    <p>This is a virtual-points demo only.</p>
-</div>
-</body>
-</html>
-"""
+    result = random.choice(["RED", "GREEN", "VIOLET"])
 
-@app.route("/", methods=["GET", "POST"])
-def home():
-    global balance
+    if color == result:
+        status = "WIN"
+    else:
+        status = "LOSS"
 
-    result = ""
-    message = ""
+    history.insert(0, f"Period {period} | Selected: {color} | Result: {result} | {status}")
 
-    if request.method == "POST":
-        selected = request.form["colour"]
-        result = random.choice(["Red", "Green", "Blue"])
+    history_box.delete(0, tk.END)
+    for item in history[:10]:
+        history_box.insert(tk.END, item)
 
-        if selected == result:
-            balance += 100
-            message = "Demo points +100 🎉"
-        else:
-            balance -= 100
-            message = "Demo points -100"
+    result_label.config(text=f"Result: {result}   ({status})")
 
-    return render_template_string(
-        HTML,
-        balance=balance,
-        result=result,
-        message=message
-    )
+    period += 1
+    update_period()
 
-if __name__ == "__main__":
-    import os
-    app.run(
-        host="0.0.0.0",
-        port=int(os.environ.get("PORT", 5000))
-    )
+
+# ---------------- WINDOW ----------------
+
+root = tk.Tk()
+root.title("Demo Colour Game")
+root.geometry("420x600")
+root.resizable(False, False)
+
+# ---------------- LOGIN ----------------
+
+login_frame = tk.Frame(root)
+login_frame.pack(fill="both", expand=True)
+
+tk.Label(
+    login_frame,
+    text="DEMO LOGIN",
+    font=("Arial", 24, "bold")
+).pack(pady=50)
+
+tk.Label(login_frame, text="Login ID").pack()
+id_entry = tk.Entry(login_frame, width=30)
+id_entry.pack(pady=8)
+
+tk.Label(login_frame, text="Password").pack()
+pass_entry = tk.Entry(login_frame, width=30, show="*")
+pass_entry.pack(pady=8)
+
+tk.Button(
+    login_frame,
+    text="LOGIN",
+    width=20,
+    command=login
+).pack(pady=25)
+
+tk.Label(
+    login_frame,
+    text="Demo ID: demo123\nPassword: 1234",
+    fg="gray"
+).pack()
+
+
+# ---------------- GAME ----------------
+
+game_frame = tk.Frame(root)
+
+tk.Label(
+    game_frame,
+    text="COLOUR GAME",
+    font=("Arial", 24, "bold")
+).pack(pady=20)
+
+period_label = tk.Label(
+    game_frame,
+    text="Period Number: 100001",
+    font=("Arial", 16, "bold")
+)
+period_label.pack(pady=10)
+
+tk.Label(
+    game_frame,
+    text="Select Colour",
+    font=("Arial", 14)
+).pack(pady=15)
+
+tk.Button(
+    game_frame,
+    text="RED",
+    width=20,
+    command=lambda: play("RED")
+).pack(pady=6)
+
+tk.Button(
+    game_frame,
+    text="GREEN",
+    width=20,
+    command=lambda: play("GREEN")
+).pack(pady=6)
+
+tk.Button(
+    game_frame,
+    text="VIOLET",
+    width=20,
+    command=lambda: play("VIOLET")
+).pack(pady=6)
+
+result_label = tk.Label(
+    game_frame,
+    text="Result: ---",
+    font=("Arial", 16, "bold")
+)
+result_label.pack(pady=25)
+
+tk.Label(
+    game_frame,
+    text="History",
+    font=("Arial", 14, "bold")
+).pack()
+
+history_box = tk.Listbox(
+    game_frame,
+    width=55,
+    height=10
+)
+history_box.pack(pady=10)
+
+tk.Label(
+    game_frame,
+    text="DEMO ONLY • No real money",
+    fg="gray"
+).pack(pady=10)
+
+root.mainloop()
