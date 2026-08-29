@@ -2,61 +2,27 @@ from flask import Flask, render_template_string, request
 
 app = Flask(__name__)
 
+balance = 1000
+
 HTML = """
 <!DOCTYPE html>
 <html>
 <head>
     <title>SixPay Demo</title>
-    <style>
-        body {
-            font-family: Arial;
-            background: #f2f4f7;
-            text-align: center;
-            padding: 40px;
-        }
-        .box {
-            max-width: 400px;
-            margin: auto;
-            background: white;
-            padding: 25px;
-            border-radius: 15px;
-            box-shadow: 0 4px 15px #ccc;
-        }
-        input, button {
-            width: 90%;
-            padding: 12px;
-            margin: 10px;
-            border-radius: 8px;
-            border: 1px solid #ccc;
-        }
-        button {
-            background: #1677ff;
-            color: white;
-            border: none;
-            cursor: pointer;
-        }
-    </style>
 </head>
 <body>
-<div class="box">
     <h1>SixPay</h1>
-    <p>Wallet Balance: ₹{{ balance }}</p>
+    <h2>Balance: ₹{{ balance }}</h2>
 
     <form method="POST">
-        <input type="number" name="amount"
-               placeholder="Enter amount" min="1" required>
+        <input type="number" name="amount" min="1" required>
         <button type="submit">Pay</button>
     </form>
 
-    {% if message %}
-        <h3>{{ message }}</h3>
-    {% endif %}
-</div>
+    <p>{{ message }}</p>
 </body>
 </html>
 """
-
-balance = 1000
 
 @app.route("/", methods=["GET", "POST"])
 def home():
@@ -79,4 +45,5 @@ def home():
     )
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    import os
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", 5000)))
