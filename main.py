@@ -1,71 +1,76 @@
 import time
 from selenium import webdriver
+from selenium.webdriver.chrome.options import Options
 from selenium.webdriver.common.by import By
 from selenium.webdriver.support import expected_conditions as EC
 from selenium.webdriver.support.ui import WebDriverWait
 
 
 def run_full_automation():
-    # 1. ब्राउज़र शुरू करें
-    driver = webdriver.Chrome()
-    driver.maximize_window()
-    wait = WebDriverWait(driver, 10)
+    # Render.com क्लाउड सर्वर के लिए क्रोम सेटिंग्स
+    chrome_options = Options()
+    chrome_options.add_argument("--headless")  # बिना स्क्रीन के बैकग्राउंड में चलाने के लिए
+    chrome_options.add_argument("--no-sandbox")  # सर्वर पर परमिशन एरर से बचने के लिए
+    chrome_options.add_argument("--disable-dev-shm-usage")  # कम मेमोरी/क्रैश से बचने के लिए
+    chrome_options.add_argument("--window-size=1920,1080")  # वर्चुअल स्क्रीन साइज सेट करना
+
+    print("ब्राउज़र शुरू किया जा रहा है...")
+    driver = webdriver.Chrome(options=chrome_options)
+    wait = WebDriverWait(driver, 15)
 
     try:
         # ========================================================
         # चरण 1: लॉगिन प्रक्रिया
         # ========================================================
         print("लॉगिन पेज पर जा रहे हैं...")
-        driver.get("https://51gameq.com")  # अपनी सही लॉगिन URL डालें
-        time.sleep(3)
+        driver.get("https://51gameq.com")
+        time.sleep(5)
 
-        # मोबाइल और पासवर्ड इनपुट बॉक्स ढूंढें (Xpath को अपनी आवश्यकतानुसार बदलें)
+        # मोबाइल इनपुट बॉक्स के लोड होने का इंतज़ार करें
+        print("लॉगिन एलिमेंट्स ढूंढ रहे हैं...")
         phone_input = wait.until(
-            EC.presence_of_element_input((By.NAME, "phone"))
+            EC.presence_of_element_located((By.NAME, "phone"))
         )
         password_input = driver.find_element(By.NAME, "password")
 
-        # अपनी क्रेडेंशियल डालें
+        # अपनी सही क्रेडेंशियल यहाँ डालें
         phone_input.send_keys("YOUR_PHONE_NUMBER")
         password_input.send_keys("YOUR_PASSWORD")
 
-        # लॉगिन बटन पर क्लिक करें
+        # लॉगिन बटन ढूंढकर क्लिक करें
         login_button = driver.find_element(
             By.XPATH, "//button[contains(text(), 'Login')]"
         )
         login_button.click()
-        print("लॉगिन बटन पर क्लिक किया गया।")
+        print("लॉगिन बटन पर क्लिक कर दिया गया है।")
 
-        # लॉगिन पूरा होने और होम पेज लोड होने के लिए रुकें
+        # लॉगिन प्रोसेस पूरा होने के लिए रुकें
         time.sleep(5)
 
         # ========================================================
-        # चरण 2: गेम पेज (WinGo) पर नेविगेट करना
+        # चरण 2: गेम पेज (WinGo) पर जाना
         # ========================================================
-        print("गेम पेज पर रीडायरेक्ट हो रहे हैं...")
-        # आप सीधे गेम का URL डाल सकते हैं या होम पेज से WinGo बटन पर क्लिक करा सकते हैं
-        driver.get("https://51gameq.com...")  # अपनी सही गेम URL डालें
+        print("गेम पेज पर नेविगेट कर रहे हैं...")
+        driver.get("https://51gameq.com...")  # यहाँ अपनी सही गेम URL डालें
         time.sleep(5)
 
         # ========================================================
-        # चरण 3: टाइमर और मुख्य एलिमेंट्स की जांच
+        # चरण 3: टाइमर की जांच
         # ========================================================
         try:
-            # टाइमर बॉक्स का टेक्स्ट पढ़ें (Time remaining)
             timer_element = driver.find_element(
                 By.XPATH, "//div[contains(@class, 'Time remaining')]"
             )
             print(f"वर्तमान टाइमर स्थिति: {timer_element.text}")
         except Exception:
-            print("टाइमर एलिमेंट नहीं मिला।")
+            print("चेतावनी: टाइमर एलिमेंट पेज पर नहीं मिला।")
 
         # ========================================================
-        # चरण 4: गेम इतिहास (Game History) टेबल का डेटा निकालना
+        # चरण 4: गेम इतिहास (Game History) का डेटा निकालना
         # ========================================================
         print("\n--- गेम इतिहास डेटा निकाला जा रहा है ---")
 
-        # टेबल की सभी कतारों (Rows) को ढूंढें
-        # नोट: वेबसाइट के वास्तविक HTML स्ट्रक्चर के अनुसार यह Xpath बदलना पड़ सकता है
+        # टेबल कतारों (Rows) को ढूंढें
         rows = driver.find_elements(
             By.XPATH, "//div[contains(@class, 'Game history')]//table//tr"
         )
@@ -74,15 +79,13 @@ def run_full_automation():
 
         for row in rows:
             try:
-                # प्रत्येक रो के अंदर मौजूद सभी कॉलम्स (td) को ढूंढें
                 cols = row.find_elements(By.TAG_NAME, "td")
 
-                # सुनिश्चित करें कि रो में डेटा मौजूद है (हेडर छोड़कर)
                 if len(cols) >= 4:
-                    period = cols[0].text  # पीरियड नंबर (जैसे: 20260829100052662)
-                    number = cols[1].text  # नंबर (जैसे: 8)
-                    big_small = cols[2].text  # बिग या स्मॉल (जैसे: Big)
-                    color = cols[3].text  # कलर का नाम
+                    period = cols[0].text
+                    number = cols[1].text
+                    big_small = cols[2].text
+                    color = cols[3].text
 
                     record = {
                         "Period": period,
@@ -96,7 +99,6 @@ def run_full_automation():
                         f"Period: {period} | Number: {number} | Result: {big_small} | Color: {color}"
                     )
             except Exception:
-                # यदि किसी रो को पार्स करने में समस्या हो तो उसे स्किप करें
                 continue
 
         print(
@@ -107,11 +109,10 @@ def run_full_automation():
         print(f"ऑटोमेशन के दौरान त्रुटि आई: {global_error}")
 
     finally:
-        # 5. काम पूरा होने के बाद ब्राउज़र बंद करें
         print("ब्राउज़र बंद किया जा रहा है...")
         driver.quit()
 
 
 if __name__ == "__main__":
     run_full_automation()
-    
+                    
