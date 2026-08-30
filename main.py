@@ -1,8 +1,9 @@
 import threading, time, random, os
-from flask import Flask, jsonify, render_template
+from flask import Flask, jsonify, render_template_string
 
-app = Flask(__name__, template_folder='.')
+app = Flask(__name__)
 
+# लाइव गेम स्टेट डेटा
 game_state = {
     "time_left": 30,
     "winning_colour": "None",
@@ -36,20 +37,9 @@ def game_timer_loop():
             else:
                 game_state["time_left"] -= 1
             time.sleep(1)
-        except Exception: time.sleep(1)
+        except Exception: 
+            time.sleep(1)
 
 threading.Thread(target=game_timer_loop, daemon=True).start()
 
-@app.route('/')
-def home():
-    # यह सीधे index.html फाइल को लोड करेगा
-    return render_template('index.html')
-
-@app.route('/api/game-state')
-def get_game_state():
-    return jsonify(game_state)
-
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
-                
+# 51GAME का फिक्स डिज़ाइन जो सीधे मुख्य फ़ाइल से लोड होगा
