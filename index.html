@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset='UTF-8'>
+    <meta name='viewport' content='width=device-width,initial-scale=1'>
+    <title>51GAME Advanced</title>
+    <style>
+        body{font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:0;text-align:center}
+        .header{background:linear-gradient(135deg,#f1c40f,#f39c12);padding:15px;color:#fff;font-weight:bold;font-size:24px}
+        .card{background:#fff;margin:15px;padding:15px;border-radius:12px;box-shadow:0 4px 10px rgba(0,0,0,0.05)}
+        .timer-sec{display:flex;justify-content:space-between;background:#fffced;border:1px dashed #f1c40f;padding:15px;border-radius:10px;margin:15px;align-items:center}
+        .btn-row{display:flex;justify-content:space-around;margin:15px;gap:8px}
+        .btn{flex:1;padding:12px 0;border:none;border-radius:8px;font-weight:bold;color:#fff;cursor:pointer;font-size:15px}
+        .g{background:#00b300}.v{background:#bb33ff}.r{background:#ff3333}.b-btn{background:#e67e22}.s-btn{background:#3498db}
+        .grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin:15px}
+        .n{width:48px;height:48px;border-radius:50%;border:2px solid #ddd;font-weight:bold;font-size:16px;background:#fff;cursor:pointer;display:flex;align-items:center;justify-content:center;margin:0 auto}
+        .hist-table{width:100%;border-collapse:collapse;margin-top:10px;font-size:13px;text-align:center}
+        .hist-table th{background:#eee;padding:8px;color:#555}
+        .hist-table td{padding:8px;border-bottom:1px solid #eee}
+        .dot{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:middle}
+        .popup-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999}
+        .popup-panel{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:450px;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -5px 15px rgba(0,0,0,0.2);padding:0;text-align:left;box-sizing:border-box;z-index:1000;display:none}
+        .p-title{background:#f39c12;color:#fff;padding:15px;font-size:18px;font-weight:bold;text-align:center;border-radius:20px 20px 0 0;margin:0}
+        .p-body{padding:20px}
+        .p-row{display:flex;justify-content:space-between;align-items:center;margin-bottom:15px}
+        .p-label{font-size:15px;color:#555;font-weight:bold}
+        .p-options{display:flex;gap:6px}
+        .p-opt-btn{padding:8px 12px;border:1px solid #ddd;background:#f9f9f9;border-radius:5px;font-weight:bold;cursor:pointer;font-size:13px}
+        .p-opt-act{background:#f39c12;color:#fff;border-color:#f39c12}
+        .qty-box{display:flex;align-items:center;border:1px solid #ddd;border-radius:5px;overflow:hidden}
+        .qty-btn{background:#f39c12;color:#fff;border:none;width:32px;height:32px;font-size:18px;font-weight:bold;cursor:pointer}
+        .qty-val{width:50px;text-align:center;border:none;font-weight:bold;font-size:15px}
+        .p-submit-btn{width:100%;padding:15px;background:#f39c12;color:#fff;border:none;font-size:16px;font-weight:bold;cursor:pointer;text-align:center}
+    </style>
+</head>
+<body>
+<div style='max-width:450px;margin:0 auto;background:#fff;min-height:100vh;padding-bottom:30px;box-shadow:0 0 10px rgba(0,0,0,0.1)'>
+    <div class='header'>51GAME</div>
+    <div class='card' style='background:linear-gradient(to bottom, #fff7d6, #fff);border:1px solid #ffe885;'>
+        <div style='color:#666;font-size:13px'>Wallet balance</div>
+        <div style='font-size:28px;font-weight:bold;color:#000;margin-top:5px'>₹<span id='bal'>100000.00</span></div>
+    </div>
+    <div class='timer-sec'>
+        <div style='text-align:left'><h4>WinGo 30sec</h4><p id='rd' style='margin:5px 0 0 0;font-weight:bold;color:#333'>------</p></div>
+        <div>
+            <div style='font-size:12px;color:#999;margin-bottom:5px'>Time remaining</div>
+            <div style='font-size:22px;font-weight:bold;background:#000;color:#fff;padding:5px 12px;border-radius:5px;display:inline-block' id='tm'>--s</div>
+        </div>
+    </div>
+    <div style='margin:15px;font-weight:bold;color:#e67e22;background:#fffcf0;padding:8px;border-radius:6px;border:1px solid #ffeaa7'>Selected Bet: <span id='sel' style='color:#000;font-weight:bold'>None</span></div>
+    
+    <div class='btn-row'>
+        <button class='btn g' onclick="openPopup('Green')">Green</button>
+        <button class='btn v' onclick="openPopup('Violet')">Violet</button>
+        <button class='btn r' onclick="openPopup('Red')">Red</button>
+    </div>
+    <div class='btn-row' style='margin-top:-5px'>
+        <button class='btn b-btn' onclick="openPopup('Big')">Big</button>
+        <button class='btn s-btn' onclick="openPopup('Small')">Small</button>
+    </div>
+    
+    <div class='grid'>
+        <button class='n' style='background:linear-gradient(135deg,#ff3333 50%,#bb33ff 50%);color:#fff' onclick="openPopup('0')">0</button>
+        <button class='n' style='color:#00b300;border-color:#00b300' onclick="openPopup('1')">1</button>
+        <button class='n' style='color:#ff3333;border-color:#ff3333' onclick="openPopup('2')">2</button>
+        <button class='n' style='color:#00b300;border-color:#00b300' onclick="openPopup('3')">3</button>
+        <button class='n' style='color:#ff3333;border-color:#ff3333' onclick="openPopup('4')">4</button>
+        <button class='n' style='background:linear-gradient(135deg,#00b300 50%,#bb33ff 50%);color:#fff' onclick="openPopup('5')">5</button>
+        <button class='n' style='color:#ff3333;border-color:#ff3333' onclick="openPopup('6')">6</button>
+        <button class='n' style='color:#00b300;border-color:#00b300' onclick="openPopup('7')">7</button>
+        <button class='n' style='color:#ff3333;border-color:#ff3333' onclick="openPopup('8')">8</button>
+        <button class='n' style='color:#00b300;border-color:#00b300' onclick="openPopup('9')">9</button>
+    </div>
+    
+    <div class='card' style='text-align:left'>
+        <h3 style='margin:0 0 10px 0;font-size:16px;color:#333;border-bottom:2px solid #f1c40f;padding-bottom:5px'>📊 Game History (WinGo 30s)</h3>
+        <table class='hist-table'><thead><tr><th>Period</th><th>Number</th><th>Size</th><th>Colour</th></tr></thead><tbody id='hist'></tbody></table>
+    </div>
+</div>
+
+<div class='popup-overlay' id='pop-over' onclick='closePopup()'></div>
+<div class='popup-panel' id='pop-panel'>
+    <h3 class='p-title' id='pop-title'>Select None</h3>
+    <div class='p-body'>
+        <div class='p-row'>
+            <div class='p-label'>Balance (Coin)</div>
+            <div class='p-options'>
+                <button class='p-opt-btn p-opt-act' onclick='setBase(1,this)'>1</button>
+                <button class='p-opt-btn' onclick='setBase(10,this)'>10</button>
+                <button class='p-opt-btn' onclick='setBase(100,this)'>100</button>
+                <button class='p-opt-btn' onclick='setBase(1000,this)'>1000</button>
+            </div>
+        </div>
+        <div class='p-row'>
+            <div class='p-label'>Quantity</div>
+            <div class='qty-box'>
+                <button class='qty-btn' onclick='changeQty(-1)'>-</button>
+                <input class='qty-val' id='p-qty' value='1' readonly>
+                <button class='qty-btn' onclick='changeQty(1)'>+</button>
+            </div>
+        </div>
+        <div class='p-row'>
+            <div class='p-label'>Multiplier</div>
+            <div class='p-options'>
+                <button class='p-opt-btn p-opt-act' onclick='setM(1,this)'>X1</button>
+                <button class='p-opt-btn' onclick='setM(5,this)'>X5</button>
+                <button class='p-opt-btn' onclick='setM(10,this)'>X10</button>
+                <button class='p-opt-btn' onclick='setM(20,this)'>X20</button>
+                <button class='p-opt-btn' onclick='setM(50,this)'>X50</button>
+                <button class='p-opt-btn' onclick='setM(100,this)'>X100</button>
+            </div>
+        </div>
+    </div>
+    <button class='p-submit-btn' onclick='lockBet()' id='p-sub-txt'>Total amount ₹1.00</button>
+</div>
+
+<script>
+let u_wallet=100000;let u_sel=null;let u_base=1;let u_qty=1;let u_mult=1;let last_id=null;
+function openPopup(val){u_sel=val;u_base=1;u_qty=1;u_mult=1;document.getElementById('pop-title').innerText='Select '+val;document.getElementById('p-qty').value=1;document.querySelectorAll('.p-opt-btn').forEach(b=>{b.classList.remove('p-opt-act');if(b.innerText=='1'||b.innerText=='X1')b.classList.add('p-opt-act')});calcTotal();document.getElementById('pop-over').style.display='block';document.getElementById('pop-panel').style.display='block'}
+function closePopup(){document.getElementById('pop-over').style.display='none';document.getElementById('pop-panel').style.display='none'}
+function setBase(val,el){u_base=val;el.parentElement.querySelectorAll('.p-opt-btn').forEach(b=>b.classList.remove('p-opt-act'));el.classList.add('p-opt-act');calcTotal()}
+function setM(val,el){u_mult=val;el.parentElement.querySelectorAll('.p-opt-btn').forEach(b=>b.classList.remove('p-opt-act'));el.classList.add('p-opt-act');calcTotal()}
+function changeQty(val){u_qty+=val;if(u_qty<1)u_qty=1;document.getElementById('p-qty').value=u_qty;calcTotal()}
+function calcTotal(){let total=u_base*u_qty*u_mult;document.getElementById('p-sub-txt').innerText='Total amount ₹'+total.toFixed(2)}
+function lockBet(){let total=u_base*u_qty*u_mult;if(total>u_wallet){alert('Insufficient balance!');return}document.getElementById('sel').innerText=u_sel+' (₹'+total.toFixed(2)+')';closePopup()}
+      
