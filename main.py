@@ -1,10 +1,12 @@
-import asyncio
+import threading
+import time
 import random
-from fastapi import FastAPI
-from fastapi.middleware.cors import CORSMiddleware
-from contextlib import asynccontextmanager
+import os
+from flask import Flask, jsonify
 
-# गेम स्टेट स्टोर करने के लिए
+app = Flask(__name__)
+
+# गेम स्टेट वैरिएबल्स
 game_state = {
     "time_left": 30,
     "winning_colour": "None",
@@ -13,8 +15,8 @@ game_state = {
 
 colours = ["Green", "Red", "Violet"]
 
-# रीयल-टाइम बैकग्राउंड टाइमर लूप
-async def game_timer_loop():
+# रीयल-टाइम बैकग्राउंड टाइमर लूप (Flask के साथ सुरक्षित चलाने के लिए threading का उपयोग)
+def game_timer_loop():
     global game_state
     while True:
         try:
@@ -24,34 +26,27 @@ async def game_timer_loop():
                 game_state["time_left"] = 30
             else:
                 game_state["time_left"] -= 1
-            await asyncio.sleep(1)
+            time.sleep(1)
         except Exception as e:
-            print(f"Error in timer loop: {e}")
-            await asyncio.sleep(1)
+            time.sleep(1)
 
-# लाइफसाइकिल मैनेजर - यह सर्वर शुरू होते ही टाइमर को बैकग्राउंड में चालू कर देता है
-@asynccontextmanager
-async def lifespan(app: FastAPI):
-    timer_task = asyncio.create_task(game_timer_loop())
-    yield
-    timer_task.cancel()
+# सर्वर शुरू होते ही बैकग्राउंड में टाइमर थ्रेड चालू करें
+timer_thread = threading.Thread(target=game_timer_loop, daemon=True)
+timer_thread.start()
 
-app = FastAPI(lifespan=lifespan)
-
-# CORS एरर फिक्स करने के लिए
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-@app.get("/")
+@app.route('/')
 def home():
-    return {"status": "success", "message": "Wingo Python Server is Running Perfectly!"}
+    return "<h1>Wingo Flask Server is Running Perfectly!</h1>"
 
-@app.get("/api/game-state")
+@app.route('/api/game-state', methods=['GET'])
 def get_game_state():
-    return game_state
+    # CORS एरर से बचने के लिए रिस्पॉन्स में हेडर्स जोड़ना
+    response = jsonify(game_state)
+    response.headers.add('Access-Control-Allow-Origin', '*')
+    return response
+
+if __name__ == "__main__":
+    # Render द्वारा दिए गए PORT पर सीधे पायथन से रन करना
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
     
