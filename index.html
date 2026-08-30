@@ -123,4 +123,4 @@ function setM(val,el){u_mult=val;el.parentElement.querySelectorAll('.p-opt-btn')
 function changeQty(val){u_qty+=val;if(u_qty<1)u_qty=1;document.getElementById('p-qty').value=u_qty;calcTotal()}
 function calcTotal(){let total=u_base*u_qty*u_mult;document.getElementById('p-sub-txt').innerText='Total amount ₹'+total.toFixed(2)}
 function lockBet(){let total=u_base*u_qty*u_mult;if(total>u_wallet){alert('Insufficient balance!');return}document.getElementById('sel').innerText=u_sel+' (₹'+total.toFixed(2)+')';closePopup()}
-      
+    
