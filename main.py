@@ -1,7 +1,7 @@
 import threading, time, random, os
-from flask import Flask, jsonify, render_template_string
+from flask import Flask, jsonify, render_template
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='.')
 
 game_state = {
     "time_left": 30,
@@ -36,8 +36,19 @@ def game_timer_loop():
             else:
                 game_state["time_left"] -= 1
             time.sleep(1)
-        except Exception: 
-            time.sleep(1)
+        except Exception: time.sleep(1)
 
 threading.Thread(target=game_timer_loop, daemon=True).start()
 
+@app.route('/')
+def home():
+    return render_template('index.html')
+
+@app.route('/api/game-state')
+def get_game_state():
+    return jsonify(game_state)
+
+if __name__ == "__main__":
+    port = int(os.environ.get("PORT", 5000))
+    app.run(host="0.0.0.0", port=port, debug=False)
+    
