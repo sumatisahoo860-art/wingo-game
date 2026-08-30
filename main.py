@@ -3,7 +3,6 @@ from flask import Flask, jsonify, render_template_string
 
 app = Flask(__name__)
 
-# लाइव गेम स्टेट डेटा
 game_state = {
     "time_left": 30,
     "winning_colour": "None",
@@ -42,4 +41,3 @@ def game_timer_loop():
 
 threading.Thread(target=game_timer_loop, daemon=True).start()
 
-# 51GAME का फिक्स डिज़ाइन जो सीधे मुख्य फ़ाइल से लोड होगा
