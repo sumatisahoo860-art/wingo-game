@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <meta charset='UTF-8'>
-    <meta name='viewport' content='width=device-width,initial-scale=1'>
-    <title>51GAME Advanced</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>51GAME Professional</title>
     <style>
         body{font-family:Arial,sans-serif;background:#f5f5f5;margin:0;padding:0;text-align:center}
         .header{background:linear-gradient(135deg,#f1c40f,#f39c12);padding:15px;color:#fff;font-weight:bold;font-size:24px}
@@ -18,6 +18,8 @@
         .hist-table th{background:#eee;padding:8px;color:#555}
         .hist-table td{padding:8px;border-bottom:1px solid #eee}
         .dot{display:inline-block;width:12px;height:12px;border-radius:50%;vertical-align:middle}
+        
+        /* 📌 पॉपअप पैनल स्टाइल */
         .popup-overlay{display:none;position:fixed;top:0;left:0;width:100%;height:100%;background:rgba(0,0,0,0.5);z-index:999}
         .popup-panel{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:450px;background:#fff;border-radius:20px 20px 0 0;box-shadow:0 -5px 15px rgba(0,0,0,0.2);padding:0;text-align:left;box-sizing:border-box;z-index:1000;display:none}
         .p-title{background:#f39c12;color:#fff;padding:15px;font-size:18px;font-weight:bold;text-align:center;border-radius:20px 20px 0 0;margin:0}
@@ -123,4 +125,4 @@ function setM(val,el){u_mult=val;el.parentElement.querySelectorAll('.p-opt-btn')
 function changeQty(val){u_qty+=val;if(u_qty<1)u_qty=1;document.getElementById('p-qty').value=u_qty;calcTotal()}
 function calcTotal(){let total=u_base*u_qty*u_mult;document.getElementById('p-sub-txt').innerText='Total amount ₹'+total.toFixed(2)}
 function lockBet(){let total=u_base*u_qty*u_mult;if(total>u_wallet){alert('Insufficient balance!');return}document.getElementById('sel').innerText=u_sel+' (₹'+total.toFixed(2)+')';closePopup()}
-                    
+    
