@@ -6,7 +6,6 @@ from flask import Flask, jsonify, render_template_string
 
 app = Flask(__name__)
 
-# राउंड आईडी को छोटा और सुरक्षित कर दिया गया है
 game_state = {
     "time_left": 30,
     "winning_colour": "None",
@@ -44,8 +43,7 @@ def game_timer_loop():
 timer_thread = threading.Thread(target=game_timer_loop, daemon=True)
 timer_thread.start()
 
-HTML_TEMPLATE = """
-<!DOCTYPE html>
+HTML_TEMPLATE = """<!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
@@ -108,7 +106,7 @@ HTML_TEMPLATE = """
     <div class="timer-section">
         <div class="timer-left">
             <h4>WinGo 30sec</h4>
-            <p id="game-id">20260829100052663</p>
+            <p id="game-id">------</p>
         </div>
         <div class="timer-right">
             <div style="font-size: 12px; color: #999; text-align: right; margin-bottom: 3px;">Time remaining</div>
@@ -193,5 +191,6 @@ HTML_TEMPLATE = """
                     } else if (data.winning_colour.includes(currentSelection)) {
                         isWin = true;
                     }
-
+                    
+                    if (isWin) {
                     
