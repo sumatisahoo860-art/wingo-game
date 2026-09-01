@@ -42,9 +42,12 @@ def update_and_get_state():
                 win_color = get_color_for_number(win_number)
             else:
                 win_color = choice
-                if win_color == 'violet': win_number = 0
-                elif win_color == 'red': win_number = 2
-                else: win_number = 1
+                if win_color == 'violet': 
+                    win_number = 0
+                elif win_color == 'red': 
+                    win_number = 2
+                else: 
+                    win_number = 1
         else:
             win_number = random.randint(0, 9)
             win_color = get_color_for_number(win_number)
@@ -194,6 +197,4 @@ def place_bet():
     choice = data.get('choice')    
     amount = int(data.get('amount', 0))
     user_id = data.get('user_id', 'user123')
-    
-    current_period, current_timer = update_and_get_state()
 
