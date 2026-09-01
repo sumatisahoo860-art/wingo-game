@@ -4,22 +4,14 @@ from flask import Flask, render_template_string, jsonify, request
 
 app = Flask(__name__)
 
+# Game memory storage configuration (Safe Automatic Version)
 game_data = {
     "start_period": 20260901001,
     "start_time": time.time(),
     "history": [],
-    "admin_choice": None,
-    "user_wallets": {"user123": 45000}, # Aapka updated 45k balance save rakha hai
+    "user_wallets": {"user123": 45000}, # Aapka 45k virtual balance locked hai
     "user_bets": {} 
 }
-
-def get_color_for_number(num):
-    if num == 0 or num == 5:
-        return 'violet'
-    elif num % 2 == 0:
-        return 'red'
-    else:
-        return 'green'
 
 def update_and_get_state():
     current_time = time.time()
@@ -32,12 +24,8 @@ def update_and_get_state():
     last_calculated_period = game_data["start_period"] + len(game_data["history"])
     
     while last_calculated_period < current_period:
-        if game_data["admin_choice"]:
-            win_color = game_data["admin_choice"]
-            game_data["admin_choice"] = None 
-        else:
-            win_color = random.choice(['red', 'green', 'violet'])
-        
+        # 100% Pure Automatic Random Selection
+        win_color = random.choice(['red', 'green', 'violet'])
         game_data["history"].append({"period": last_calculated_period, "result": win_color})
         
         if last_calculated_period in game_data["user_bets"]:
@@ -60,7 +48,7 @@ HTML_UI = """
     <title>Wingo Color Trading Game</title>
     <style>
         body { font-family: 'Arial', sans-serif; background: #f5f5f5; text-align: center; padding: 10px; margin: 0; }
-        .app-container { max-width: 450px; background: white; margin: 0 auto; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); padding: 15px; min-height: 90vh; }
+        .app-container { max-width: 450px; background: white; margin: 0 auto; border-radius: 15px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); padding: 15px; min-height: 90vh; position: relative; }
         .header { background: linear-gradient(135deg, #667eea, #764ba2); color: white; padding: 15px; border-radius: 10px; font-weight: bold; }
         .balance-box { font-size: 24px; font-weight: bold; margin: 15px 0; color: #333; }
         .game-info { display: flex; justify-content: space-between; background: #fdf2e9; padding: 10px; border-radius: 8px; margin: 15px 0; border: 1px solid #ffeb3b; }
@@ -73,15 +61,30 @@ HTML_UI = """
         .history-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; }
         .badge { padding: 3px 8px; border-radius: 4px; color: white; font-weight: bold; text-transform: uppercase; }
         
-        /* Hidden by default */
-        .admin-panel { display: none; margin-top: 30px; border-top: 2px dashed #ccc; background: #fffde7; border-radius: 10px; padding: 10px; }
-        .admin-btn { padding: 8px 15px; font-size: 14px; border: none; border-radius: 5px; color: white; font-weight: bold; cursor: pointer; margin: 5px; }
+        /* Premium Win Picture Popup Overlay */
+        .popup-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.6); z-index: 1000; justify-content: center; align-items: center; }
+        .popup-card { background: white; padding: 20px; border-radius: 15px; max-width: 320px; width: 80%; text-align: center; box-shadow: 0 5px 20px rgba(0,0,0,0.3); animation: pop 0.3s ease-out; }
+        @keyframes pop { from { transform: scale(0.7); opacity: 0; } to { transform: scale(1); opacity: 1; } }
+        .win-img { width: 120px; height: 120px; margin-bottom: 15px; }
+        .close-popup { background: #ff5722; color: white; border: none; padding: 10px 20px; border-radius: 20px; font-weight: bold; cursor: pointer; margin-top: 15px; width: 100%; }
     </style>
 </head>
 <body>
+
+    <!-- 🏆 WINNING CELEBRATION POPUP DIALOG -->
+    <div class="popup-overlay" id="win-popup">
+        <div class="popup-card">
+            <!-- Open-source Premium Trophy SVG/Picture -->
+            <svg class="win-img" viewBox="0 0 24 24" fill="none" xmlns="http://w3.org"><circle cx="12" cy="12" r="10" fill="#FFD700"/><path d="M12 6V14M12 14L9 11M12 14L15 11" stroke="#FFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 18H16" stroke="#FFF" stroke-width="2" stroke-linecap="round"/></svg>
+            <h2 style="color: #4caf50; margin: 5px 0;">🎉 YOU WIN!</h2>
+            <p style="font-size: 16px; color: #555; margin: 10px 0;">Congratulations! Your prediction was 100% correct.</p>
+            <button class="close-popup" onclick="closePopup()">Awesome!</button>
+        </div>
+    </div>
+
     <div class="app-container">
         <div class="header">🎮 WINGO COLOR TRADING</div>
-        <div class="balance-box">🪙 Wallet: <span id="balance">10000</span> Coins</div>
+        <div class="balance-box">🪙 Wallet: <span id="balance">45000</span> Coins</div>
         <div class="game-info">
             <div>Period: <br><strong id="period-id">-</strong></div>
             <div class="timer">Time Left: <br><span id="time-left">30</span>s</div>
@@ -93,29 +96,15 @@ HTML_UI = """
             <button class="btn violet" onclick="placeBet('violet')">Violet</button>
             <button class="btn red" onclick="placeBet('red')">Red</button>
         </div>
-        
-        <!-- Private Admin Panel Component -->
-        <div class="admin-panel" id="secret-panel">
-            <h4>⚙️ Secret Result Controller (Only For You)</h4>
-            <button class="admin-btn green" onclick="controlResult('green')">Force Green</button>
-            <button class="admin-btn violet" onclick="controlResult('violet')">Force Violet</button>
-            <button class="admin-btn red" onclick="controlResult('red')">Force Red</button>
-            <div id="admin-status" style="font-size: 12px; color: #4caf50; font-weight: bold; margin-top: 5px;"></div>
-        </div>
-        
         <div class="history">
             <h4>📜 Last Game Results</h4>
             <div id="history-logs">Loading...</div>
         </div>
     </div>
+
     <script>
         let lastLoggedPeriod = null;
-        
-        // Check if URL has ?admin=true parameter
-        const urlParams = new URLSearchParams(window.location.search);
-        if (urlParams.get('admin') === 'true') {
-            document.getElementById('secret-panel').style.display = 'block';
-        }
+        let lastWalletBalance = 45000;
 
         function updateStatus() {
             fetch('/api/game-status')
@@ -124,12 +113,20 @@ HTML_UI = """
                     document.getElementById('period-id').innerText = data.period;
                     document.getElementById('time-left').innerText = data.timer;
                     document.getElementById('balance').innerText = data.wallet;
+                    
                     if(lastLoggedPeriod && data.period !== lastLoggedPeriod && data.history.length > 0) {
                         let lastResult = data.history[data.history.length - 1];
-                        alert(`Round ${lastResult.period} Ended! Winner color is: ${lastResult.result.toUpperCase()}`);
-                        document.getElementById('admin-status').innerText = "";
+                        
+                        // Check if current balance is greater than previous, if yes show popup picture
+                        if (data.wallet > lastWalletBalance) {
+                            document.getElementById('win-popup').style.display = 'flex';
+                        } else {
+                            alert(`Round ${lastResult.period} Ended! Winner color is: ${lastResult.result.toUpperCase()}`);
+                        }
                     }
                     lastLoggedPeriod = data.period;
+                    lastWalletBalance = data.wallet;
+                    
                     let historyHtml = '';
                     let displayHistory = [...data.history].reverse().slice(0, 7);
                     displayHistory.forEach(item => {
@@ -148,16 +145,13 @@ HTML_UI = """
             }).then(res => res.json()).then(data => {
                 if(data.success) {
                     document.getElementById('balance').innerText = data.new_balance;
+                    lastWalletBalance = data.new_balance; // Sync balance snapshot
                     alert(`Bet added: ${color.toUpperCase()} pe ${amount} Coins lag gye!`);
                 } else { alert(data.message); }
             });
         }
-        function controlResult(color) {
-            fetch('/admin/control?color=' + color)
-                .then(res => res.text())
-                .then(text => {
-                    document.getElementById('admin-status').innerText = "Target set: Next color will be " + color.toUpperCase();
-                });
+        function closePopup() {
+            document.getElementById('win-popup').style.display = 'none';
         }
         setInterval(updateStatus, 1000);
         updateStatus();
@@ -183,17 +177,4 @@ def place_bet():
     if game_data["user_wallets"][user_id] < amount: return jsonify({"success": False, "message": "Balance kam hai!"})
     game_data["user_wallets"][user_id] -= amount
     if current_period not in game_data["user_bets"]: game_data["user_bets"][current_period] = {}
-    if user_id not in game_data["user_bets"][current_period]: game_data["user_bets"][current_period][user_id] = []
-    game_data["user_bets"][current_period][user_id].append({"color": color, "amount": amount})
-    return jsonify({"success": True, "new_balance": game_data["user_wallets"][user_id]})
-
-@app.route('/admin/control', methods=['GET'])
-def admin_control():
-    color = request.args.get('color')
-    if color in ['red', 'green', 'violet']:
-        game_data['admin_choice'] = color
-        return f"Success"
-    return "Invalid"
-
-if __name__ == '__main__':
-    
+        
