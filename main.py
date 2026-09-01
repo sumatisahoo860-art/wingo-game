@@ -14,11 +14,14 @@ game_data = {
     "user_bets": {}               
 }
 
-# Mapping numbers to colors
+# Numbers mapping rules strictly defined
 def get_color_for_number(num):
-    if num in: return 'violet'
-    elif num % 2 == 0: return 'red'
-    else: return 'green'
+    if num in: 
+        return 'violet'
+    elif num % 2 == 0: 
+        return 'red'
+    else: 
+        return 'green'
 
 def update_and_get_state():
     current_time = time.time()
@@ -39,9 +42,12 @@ def update_and_get_state():
                 win_color = get_color_for_number(win_number)
             else:
                 win_color = choice
-                if win_color == 'violet': win_number = random.choice([0, 5])
-                elif win_color == 'red': win_number = random.choice([2, 4, 6, 8])
-                else: win_number = random.choice([1, 3, 7, 9])
+                if win_color == 'violet': 
+                    win_number = random.choice([0, 5])
+                elif win_color == 'red': 
+                    win_number = random.choice([2, 4, 6, 8])
+                else: 
+                    win_number = random.choice([1, 3, 7, 9])
         else:
             win_number = random.randint(0, 9)
             win_color = get_color_for_number(win_number)
@@ -191,6 +197,4 @@ HTML_UI = """
             .then(data => {
                 if(data.success) {
                     document.getElementById('balance').innerText = data.new_balance;
-                    alert(`Bet added: ${choice.toUpperCase()} pe ${amount} Coins lag gye!`);
-                } else {
-                
+                    
