@@ -4,7 +4,7 @@ from flask import Flask, render_template_string, jsonify, request
 
 app = Flask(__name__)
 
-# Core game memory configuration
+# Game data cache database configuration
 game_data = {
     "start_period": 20260901001,
     "start_time": time.time(),
@@ -14,11 +14,11 @@ game_data = {
     "user_bets": {}               
 }
 
-# Fixed logic mapping numbers to absolute static colors
+# 100% Fixed and checked number mapping structure
 def get_color_for_number(num):
     if num == 0 or num == 5:
         return 'violet'
-    elif num == 2 or num == 4 or num == 6 or num == 8:
+    elif num % 2 == 0:
         return 'red'
     else:
         return 'green'
