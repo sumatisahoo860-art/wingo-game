@@ -14,13 +14,13 @@ game_data = {
     "user_bets": {}               
 }
 
-# Sahi numbers and color mapping rules
+# Clear logic for matching colors and numbers
 def get_color_for_number(num):
-    if num in: 
+    if num == 0 or num == 5:
         return 'violet'
-    elif num % 2 == 0: 
+    elif num % 2 == 0:
         return 'red'
-    else: 
+    else:
         return 'green'
 
 def update_and_get_state():
@@ -42,12 +42,12 @@ def update_and_get_state():
                 win_color = get_color_for_number(win_number)
             else:
                 win_color = choice
-                if win_color == 'violet': 
-                    win_number = random.choice([0, 5])
-                elif win_color == 'red': 
-                    win_number = random.choice([2, 4, 6, 8])
-                else: 
-                    win_number = random.choice([1, 3, 7, 9])
+                if win_color == 'violet':
+                    win_number = 0
+                elif win_color == 'red':
+                    win_number = 2
+                else:
+                    win_number = 1
         else:
             win_number = random.randint(0, 9)
             win_color = get_color_for_number(win_number)
@@ -197,4 +197,5 @@ HTML_UI = """
             .then(data => {
                 if(data.success) {
                     document.getElementById('balance').innerText = data.new_balance;
-            
+                    alert(`Bet added: ${choice.toUpperCase()} pe ${amount} Coins lag gye!`);
+                    
