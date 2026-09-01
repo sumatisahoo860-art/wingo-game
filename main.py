@@ -74,7 +74,6 @@ HTML_UI = """
     <!-- 🏆 WINNING CELEBRATION POPUP DIALOG -->
     <div class="popup-overlay" id="win-popup">
         <div class="popup-card">
-            <!-- Open-source Premium Trophy SVG/Picture -->
             <svg class="win-img" viewBox="0 0 24 24" fill="none" xmlns="http://w3.org"><circle cx="12" cy="12" r="10" fill="#FFD700"/><path d="M12 6V14M12 14L9 11M12 14L15 11" stroke="#FFF" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/><path d="M8 18H16" stroke="#FFF" stroke-width="2" stroke-linecap="round"/></svg>
             <h2 style="color: #4caf50; margin: 5px 0;">🎉 YOU WIN!</h2>
             <p style="font-size: 16px; color: #555; margin: 10px 0;">Congratulations! Your prediction was 100% correct.</p>
@@ -117,7 +116,6 @@ HTML_UI = """
                     if(lastLoggedPeriod && data.period !== lastLoggedPeriod && data.history.length > 0) {
                         let lastResult = data.history[data.history.length - 1];
                         
-                        // Check if current balance is greater than previous, if yes show popup picture
                         if (data.wallet > lastWalletBalance) {
                             document.getElementById('win-popup').style.display = 'flex';
                         } else {
@@ -145,7 +143,7 @@ HTML_UI = """
             }).then(res => res.json()).then(data => {
                 if(data.success) {
                     document.getElementById('balance').innerText = data.new_balance;
-                    lastWalletBalance = data.new_balance; // Sync balance snapshot
+                    lastWalletBalance = data.new_balance;
                     alert(`Bet added: ${color.toUpperCase()} pe ${amount} Coins lag gye!`);
                 } else { alert(data.message); }
             });
@@ -177,4 +175,6 @@ def place_bet():
     if game_data["user_wallets"][user_id] < amount: return jsonify({"success": False, "message": "Balance kam hai!"})
     game_data["user_wallets"][user_id] -= amount
     if current_period not in game_data["user_bets"]: game_data["user_bets"][current_period] = {}
-        
+    if user_id not in game_data["user_bets"][current_period]: game_data["user_bets"][current_period][user_id] = []
+    game_data["user_bets"][current_period][user_id].append({"color": color, "amount": amount})
+    
