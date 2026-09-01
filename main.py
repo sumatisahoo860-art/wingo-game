@@ -4,7 +4,7 @@ from flask import Flask, render_template_string, jsonify, request
 
 app = Flask(__name__)
 
-# Core game data memory storage
+# Core game memory configuration
 game_data = {
     "start_period": 20260901001,
     "start_time": time.time(),
@@ -14,11 +14,11 @@ game_data = {
     "user_bets": {}               
 }
 
-# Fixed mapping function for colors and numbers
+# Fixed logic mapping numbers to absolute static colors
 def get_color_for_number(num):
-    if num in:
+    if num == 0 or num == 5:
         return 'violet'
-    elif num % 2 == 0:
+    elif num == 2 or num == 4 or num == 6 or num == 8:
         return 'red'
     else:
         return 'green'
@@ -42,12 +42,9 @@ def update_and_get_state():
                 win_color = get_color_for_number(win_number)
             else:
                 win_color = choice
-                if win_color == 'violet':
-                    win_number = 0
-                elif win_color == 'red':
-                    win_number = 2
-                else:
-                    win_number = 1
+                if win_color == 'violet': win_number = 0
+                elif win_color == 'red': win_number = 2
+                else: win_number = 1
         else:
             win_number = random.randint(0, 9)
             win_color = get_color_for_number(win_number)
@@ -67,7 +64,6 @@ def update_and_get_state():
                         total_winnings += int(bet_info["amount"] * multiplier)
                     elif bet_info["type"] == "number" and int(bet_info["choice"]) == win_number:
                         total_winnings += int(bet_info["amount"] * 9.0)
-                
                 game_data["user_wallets"][user_id] += total_winnings
         
         last_calculated_period += 1
@@ -198,4 +194,6 @@ def place_bet():
     choice = data.get('choice')    
     amount = int(data.get('amount', 0))
     user_id = data.get('user_id', 'user123')
+    
+    current_period, current_timer = update_and_get_state()
 
