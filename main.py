@@ -1,54 +1,110 @@
-import threading, time, random, os
-from flask import Flask, jsonify, render_template
+import time
+import random
+from fastapi import FastAPI, HTTPException
+from pydantic import BaseModel
+from typing import Dict, List
 
-app = Flask(__name__, template_folder='.')
+app = FastAPI(title="Safe Wingo Color Game API")
 
+# Global Game State
 game_state = {
-    "time_left": 30,
-    "winning_colour": "None",
-    "winning_number": 0,
-    "winning_size": "None",
-    "round_id": 52666,
-    "history": [
-        {"round": "20260830100052665", "number": 7, "size": "Big", "colour": "Green"},
-        {"round": "20260830100052664", "number": 3, "size": "Small", "colour": "Green"},
-        {"round": "20260830100052663", "number": 3, "size": "Small", "colour": "Green"}
-    ]
+    "period_id": 20260901001,
+    "timer": 30,  # 30 seconds game cycle
+    "next_result_override": None,  # Admin override parameter
+    "history": []
 }
 
-def game_timer_loop():
-    global game_state
-    while True:
-        try:
-            if game_state["time_left"] <= 0:
-                num = random.randint(0, 9)
-                game_state["winning_number"] = num
-                game_state["winning_size"] = "Big" if num >= 5 else "Small"
-                col = "Red+Violet" if num == 0 else ("Green+Violet" if num == 5 else ("Red" if num % 2 == 0 else "Green"))
-                game_state["winning_colour"] = col
-                
-                new_hist = {"round": "202608301000" + str(game_state["round_id"]), "number": num, "size": game_state["winning_size"], "colour": col}
-                game_state["history"].insert(0, new_hist)
-                if len(game_state["history"]) > 6: game_state["history"].pop()
-                
-                game_state["round_id"] += 1
-                game_state["time_left"] = 30
-            else:
-                game_state["time_left"] -= 1
-            time.sleep(1)
-        except Exception: time.sleep(1)
+# Dummy User Database (In-Memory)
+users_db: Dict[str, dict] = {
+    "user123": {"username": "player1", "coins": 10000} # Users start with 10k free coins
+}
 
-threading.Thread(target=game_timer_loop, daemon=True).start()
+# Current Active Bets
+active_bets: List[dict] = []
 
-@app.route('/')
-def home():
-    return render_template('index.html')
+class BetModel(BaseModel):
+    user_id: str
+    chosen_color: str  # "red", "green", "violet"
+    amount: int
 
-@app.route('/api/game-state')
-def get_game_state():
-    return jsonify(game_state)
+class OverrideModel(BaseModel):
+    secret_admin_key: str
+    target_color: str
 
-if __name__ == "__main__":
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host="0.0.0.0", port=port, debug=False)
+# 1. Fetch Game Status & Timer
+@app.get("/game/status")
+def get_game_status():
+    return {
+        "period_id": game_state["period_id"],
+        "timer": game_state["timer"],
+        "history": game_state["history"][-10:] # Show last 10 results
+    }
+
+# 2. Fetch User Coin Balance
+@app.get("/user/balance/{user_id}")
+def get_balance(user_id: str):
+    if user_id not in users_db:
+        raise HTTPException(status_code=404, detail="User not found")
+    return {"coins": users_db[user_id]["coins"]}
+
+# 3. Place a Bet (Virtual Coins)
+@app.post("/game/bet")
+def place_bet(bet: BetModel):
+    if bet.user_id not in users_db:
+        raise HTTPException(status_code=404, detail="User not found")
     
+    user = users_db[bet.user_id]
+    if user["coins"] < bet.amount:
+        raise HTTPException(status_code=400, detail="Insufficient virtual coins")
+    
+    if bet.chosen_color not in ["red", "green", "violet"]:
+        raise HTTPException(status_code=400, detail="Invalid color choice")
+
+    # Deduct coins and record bet
+    user["coins"] -= bet.amount
+    active_bets.append({
+        "user_id": bet.user_id,
+        "chosen_color": bet.chosen_color,
+        "amount": bet.amount
+    })
+    return {"status": "Bet successfully placed!", "remaining_coins": user["coins"]}
+
+# 4. Admin Control Panel (Result Changer)
+@app.post("/admin/override")
+def admin_override(data: OverrideModel):
+    # Protect with a basic key
+    if data.secret_admin_key != "MY_SUPER_SECRET_KEY_123":
+        raise HTTPException(status_code=403, detail="Unauthorized Admin")
+    
+    if data.target_color not in ["red", "green", "violet"]:
+        raise HTTPException(status_code=400, detail="Invalid color")
+        
+    game_state["next_result_override"] = data.target_color
+    return {"status": f"Success! Next winning color forced to: {data.target_color}"}
+
+# Background Logic simulator to settle bets every 30 seconds
+# Note: In production, run this in a separate background thread / task loop
+def settle_game_round():
+    global active_bets
+    
+    # Determine Winner
+    if game_state["next_result_override"]:
+        winning_color = game_state["next_result_override"]
+        game_state["next_result_override"] = None # Reset override
+    else:
+        # Standard Random if admin doesn't interfere
+        winning_color = random.choice(["red", "green", "violet"])
+    
+    # Process all bets
+    for bet in active_bets:
+        user = users_db[bet["user_id"]]
+        if bet["chosen_color"] == winning_color:
+            # Win payout multipliers
+            multiplier = 2 if winning_color in ["red", "green"] else 4.5
+            winnings = int(bet["amount"] * multiplier)
+            user["coins"] += winnings
+
+    # Save to history & update period
+    game_state["history"].append({"period_id": game_state["period_id"], "winner": winning_color})
+    game_state["period_id"] += 1
+    active_bets = [] # Clear active bets for next round
