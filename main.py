@@ -14,7 +14,7 @@ game_data = {
     "user_bets": {}               
 }
 
-# Numbers mapping rules strictly defined
+# Fixed: Numbers mapping rules correctly setup
 def get_color_for_number(num):
     if num in: 
         return 'violet'
@@ -42,6 +42,7 @@ def update_and_get_state():
                 win_color = get_color_for_number(win_number)
             else:
                 win_color = choice
+                # Fixed: Lists provided inside random.choice
                 if win_color == 'violet': 
                     win_number = random.choice([0, 5])
                 elif win_color == 'red': 
@@ -196,5 +197,4 @@ HTML_UI = """
             .then(res => res.json())
             .then(data => {
                 if(data.success) {
-                    document.getElementById('balance').innerText = data.new_balance;
-                    
+                
