@@ -9,15 +9,14 @@ game_data = {
     "start_period": 20260901001,
     "start_time": time.time(),
     "history": [],
-    "admin_choice": None,         # Can be color or number string (e.g., 'red' or '5')
+    "admin_choice": None,         
     "user_wallets": {"user123": 10000}, 
-    "user_bets": {}               # Structure: {period_id: {user_id: [{"type": "color"/"number", "choice": c/n, "amount": a}]}}
+    "user_bets": {}               
 }
 
-# Mapping numbers to colors for automated consistency
+# Mapping numbers to colors
 def get_color_for_number(num):
-    if num == 0: return 'violet'
-    elif num == 5: return 'violet'
+    if num in: return 'violet'
     elif num % 2 == 0: return 'red'
     else: return 'green'
 
@@ -32,7 +31,6 @@ def update_and_get_state():
     last_calculated_period = game_data["start_period"] + len(game_data["history"])
     
     while last_calculated_period < current_period:
-        # Determine winning number and color
         if game_data["admin_choice"]:
             choice = game_data["admin_choice"]
             game_data["admin_choice"] = None 
@@ -41,7 +39,6 @@ def update_and_get_state():
                 win_color = get_color_for_number(win_number)
             else:
                 win_color = choice
-                # pick a valid number for that color
                 if win_color == 'violet': win_number = random.choice([0, 5])
                 elif win_color == 'red': win_number = random.choice([2, 4, 6, 8])
                 else: win_number = random.choice([1, 3, 7, 9])
@@ -55,7 +52,6 @@ def update_and_get_state():
             "result_number": win_number
         })
         
-        # Settle bets
         if last_calculated_period in game_data["user_bets"]:
             for user_id, bets_list in game_data["user_bets"][last_calculated_period].items():
                 total_winnings = 0
@@ -64,7 +60,6 @@ def update_and_get_state():
                         multiplier = 4.5 if win_color == 'violet' else 2.0
                         total_winnings += int(bet_info["amount"] * multiplier)
                     elif bet_info["type"] == "number" and int(bet_info["choice"]) == win_number:
-                        # Number win gives 9x payout
                         total_winnings += int(bet_info["amount"] * 9.0)
                 
                 game_data["user_wallets"][user_id] += total_winnings
@@ -96,9 +91,9 @@ HTML_UI = """
         
         .number-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 15px 0; }
         .num-btn { padding: 12px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; color: white; cursor: pointer; }
-        .n0, .n5 { background: #9c27b0; } /* Violet numbers */
-        .n1, .n3, .n7, .n9 { background: #4caf50; } /* Green numbers */
-        .n2, .n4, .n6, .n8 { background: #f44336; } /* Red numbers */
+        .n0, .n5 { background: #9c27b0; } 
+        .n1, .n3, .n7, .n9 { background: #4caf50; } 
+        .n2, .n4, .n6, .n8 { background: #f44336; } 
         
         .btn:active, .num-btn:active { transform: translateY(2px); box-shadow: none; }
         .input-box { width: 80%; padding: 10px; font-size: 16px; border-radius: 8px; border: 1px solid #ccc; text-align: center; margin-bottom: 10px; }
@@ -122,14 +117,12 @@ HTML_UI = """
         <h3>Enter Amount to Bet:</h3>
         <input type="number" id="bet-amount" class="input-box" value="100" min="10">
         
-        <!-- Color Betting Buttons -->
         <div class="bet-buttons">
             <button class="btn green" onclick="placeBet('color', 'green')">Green</button>
             <button class="btn violet" onclick="placeBet('color', 'violet')">Violet</button>
             <button class="btn red" onclick="placeBet('color', 'red')">Red</button>
         </div>
 
-        <!-- Number Betting Grid -->
         <h3>Select Number (9x Profit):</h3>
         <div class="number-grid">
             <button class="num-btn n0" onclick="placeBet('number', '0')">0</button>
@@ -190,4 +183,14 @@ HTML_UI = """
             if(amount > currentBalance) { alert("Wallet me balance kam hai!"); return; }
             
             fetch('/api/place-bet', {
-                    
+                method: 'POST',
+                headers: {'Content-Type': 'application/json'},
+                body: JSON.stringify({ type: type, choice: choice, amount: amount, user_id: 'user123' })
+            })
+            .then(res => res.json())
+            .then(data => {
+                if(data.success) {
+                    document.getElementById('balance').innerText = data.new_balance;
+                    alert(`Bet added: ${choice.toUpperCase()} pe ${amount} Coins lag gye!`);
+                } else {
+                
