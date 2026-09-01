@@ -4,14 +4,14 @@ from flask import Flask, render_template_string, jsonify, request
 
 app = Flask(__name__)
 
-# Game memory storage configuration (Aapka pehle waala original format)
+# Game memory storage configuration
 game_data = {
     "start_period": 20260901001,
     "start_time": time.time(),
     "history": [],
     "admin_choice": None,
     "user_wallets": {"user123": 10000}, 
-    "user_bets": {} # Structure: {period_id: {user_id: [{"color": c, "amount": a}]}}
+    "user_bets": {} 
 }
 
 def update_and_get_state():
@@ -33,7 +33,6 @@ def update_and_get_state():
         
         game_data["history"].append({"period": last_calculated_period, "result": win_color})
         
-        # Har ek bet par individual profit calculate karne wala system
         if last_calculated_period in game_data["user_bets"]:
             for user_id, bets_list in game_data["user_bets"][last_calculated_period].items():
                 total_winnings = 0
@@ -72,6 +71,10 @@ HTML_UI = """
         .history { text-align: left; background: #fafafa; padding: 10px; border-radius: 8px; margin-top: 20px; border: 1px solid #eee; }
         .history-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; }
         .badge { padding: 3px 8px; border-radius: 4px; color: white; font-weight: bold; text-transform: uppercase; }
+        
+        /* Secret Admin Panel Styling */
+        .admin-panel { margin-top: 30px; border-top: 2px dashed #ccc; padding-top: 15px; background: #fffde7; border-radius: 10px; padding: 10px; }
+        .admin-btn { padding: 8px 15px; font-size: 14px; border: none; border-radius: 5px; color: white; font-weight: bold; cursor: pointer; margin: 5px; }
     </style>
 </head>
 <body>
@@ -94,6 +97,15 @@ HTML_UI = """
             <button class="btn red" onclick="placeBet('red')">Red</button>
         </div>
 
+        <!-- 🛠️ SECRET ADMIN PANEL DIRECTLY ON THE PAGE -->
+        <div class="admin-panel">
+            <h4>⚙️ Secret Result Controller (Only For You)</h4>
+            <button class="admin-btn green" onclick="controlResult('green')">Force Green</button>
+            <button class="admin-btn violet" onclick="controlResult('violet')">Force Violet</button>
+            <button class="admin-btn red" onclick="controlResult('red')">Force Red</button>
+            <div id="admin-status" style="font-size: 12px; color: #4caf50; font-weight: bold; margin-top: 5px;"></div>
+        </div>
+
         <div class="history">
             <h4>📜 Last Game Results</h4>
             <div id="history-logs">Loading...</div>
@@ -114,6 +126,7 @@ HTML_UI = """
                     if(lastLoggedPeriod && data.period !== lastLoggedPeriod && data.history.length > 0) {
                         let lastResult = data.history[data.history.length - 1];
                         alert(`Round ${lastResult.period} Ended! Winner color is: ${lastResult.result.toUpperCase()}`);
+                        document.getElementById('admin-status').innerText = ""; // Clear status on new round
                     }
                     lastLoggedPeriod = data.period;
                     
@@ -146,6 +159,15 @@ HTML_UI = """
                     alert(data.message);
                 }
             });
+        }
+
+        // DIRECT CLICK FUNCTION TO FORCE RESULT
+        function controlResult(color) {
+            fetch('/admin/control?color=' + color)
+                .then(res => res.text())
+                .then(text => {
+                    document.getElementById('admin-status').innerText = "Target set: Next color will be " + color.toUpperCase();
+                });
         }
 
         setInterval(updateStatus, 1000);
@@ -194,18 +216,3 @@ def place_bet():
         
     game_data["user_bets"][current_period][user_id].append({"color": color, "amount": amount})
     
-    return jsonify({"success": True, "new_balance": game_data["user_wallets"][user_id]})
-
-@app.route('/admin/control', methods=['GET'])
-def admin_control():
-    color = request.args.get('color')
-    if color in ['red', 'green', 'violet']:
-        game_data['admin_choice'] = color
-        return f"Success! Next round color set to: {color.upper()}"
-    return "Invalid color! Use red, green, or violet."
-
-if __name__ == '__main__':
-    import os
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
-    8
