@@ -4,16 +4,54 @@ from flask import Flask, render_template_string, jsonify, request
 
 app = Flask(__name__)
 
-# Game data ko memory me save rakhne ke liye variables
+# Game memory data
 game_data = {
-    "period": 20260901001,
-    "timer": 30,
-    "current_bets": [],
+    "start_period": 20260901001,
+    "start_time": time.time(),
     "history": [],
-    "admin_choice": None  # Isse aap result control kar sakte hain
+    "admin_choice": None,
+    "user_wallets": {"user123": 10000}, # Default dummy user wallet
+    "user_bets": {} # Structure: {period_id: {user_id: {"color": color, "amount": amount}}}
 }
 
-# HTML aur UI Code (Single file deployment ke liye)
+# Is function se har refresh par timer, period aur purani bets automatic settle hoti hain
+def update_and_get_state():
+    current_time = time.time()
+    elapsed_time = current_time - game_data["start_time"]
+    
+    # 30 seconds ka ek round hai
+    rounds_passed = int(elapsed_time // 30)
+    current_timer = 30 - int(elapsed_time % 30)
+    current_period = game_data["start_period"] + rounds_passed
+    
+    # Agar naye rounds pass hue hain, toh pichle sabhi rounds ka result calculate karo
+    last_calculated_period = game_data["start_period"] + len(game_data["history"])
+    
+    while last_calculated_period < current_period:
+        # Check agar admin ne koi result force kiya tha
+        if game_data["admin_choice"]:
+            win_color = game_data["admin_choice"]
+            game_data["admin_choice"] = None # Reset override after use
+        else:
+            # Sahi random generation jo sirf violet nahi dega
+            win_color = random.choice(['red', 'green', 'violet'])
+        
+        # Is period ke results ko history mein daalo
+        game_data["history"].append({"period": last_calculated_period, "result": win_color})
+        
+        # Pata karo ki kis user ne is round mein bet lagayi thi aur use paise do
+        if last_calculated_period in game_data["user_bets"]:
+            for user_id, bet_info in game_data["user_bets"][last_calculated_period].items():
+                if bet_info["color"] == win_color:
+                    # Multiplier ratio
+                    multiplier = 4.5 if win_color == 'violet' else 2.0
+                    winnings = int(bet_info["amount"] * multiplier)
+                    game_data["user_wallets"][user_id] += winnings
+        
+        last_calculated_period += 1
+        
+    return current_period, current_timer
+
 HTML_UI = """
 <!DOCTYPE html>
 <html>
@@ -67,7 +105,7 @@ HTML_UI = """
     </div>
 
     <script>
-        let walletBalance = 10000;
+        let lastLoggedPeriod = null;
 
         function updateStatus() {
             fetch('/api/game-status')
@@ -75,9 +113,19 @@ HTML_UI = """
                 .then(data => {
                     document.getElementById('period-id').innerText = data.period;
                     document.getElementById('time-left').innerText = data.timer;
+                    document.getElementById('balance').innerText = data.wallet;
+                    
+                    // Naya round shuru hote hi screen par alert aayega
+                    if(lastLoggedPeriod && data.period !== lastLoggedPeriod && data.history.length > 0) {
+                        let lastResult = data.history[data.history.length - 1];
+                        alert(`Round ${lastResult.period} Ended! Winner color is: ${lastResult.result.toUpperCase()}`);
+                    }
+                    lastLoggedPeriod = data.period;
                     
                     let historyHtml = '';
-                    data.history.reverse().forEach(item => {
+                    // Sirf aakhri 7 results list mein dikhane ke liye
+                    let displayHistory = [...data.history].reverse().slice(0, 7);
+                    displayHistory.forEach(item => {
                         let colorClass = item.result === 'green' ? 'green' : (item.result === 'red' ? 'red' : 'violet');
                         historyHtml += `<div class="history-item"><span>ID: ${item.period}</span> <span class="badge ${colorClass}">${item.result}</span></div>`;
                     });
@@ -87,25 +135,25 @@ HTML_UI = """
 
         function placeBet(color) {
             let amount = parseInt(document.getElementById('bet-amount').value);
-            if(amount > walletBalance) { alert("Balance kam hai!"); return; }
             
             fetch('/api/place-bet', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
-                body: JSON.stringify({ color: color, amount: amount })
+                body: JSON.stringify({ color: color, amount: amount, user_id: 'user123' })
             })
             .then(res => res.json())
             .then(data => {
                 if(data.success) {
-                    walletBalance -= amount;
-                    document.getElementById('balance').innerText = walletBalance;
+                    document.getElementById('balance').innerText = data.new_balance;
                     alert("Bet successful on " + color.toUpperCase());
+                } else {
+                    alert(data.message);
                 }
             });
         }
 
-        // Har ek second me UI update hoga
         setInterval(updateStatus, 1000);
+        updateStatus();
     </script>
 </body>
 </html>
@@ -115,53 +163,52 @@ HTML_UI = """
 def home():
     return render_template_string(HTML_UI)
 
-# Live status API data fetch karne ke liye
 @app.route('/api/game-status', methods=['GET'])
 def get_status():
-    return jsonify(game_data)
+    current_period, current_timer = update_and_get_state()
+    return jsonify({
+        "period": current_period,
+        "timer": current_timer,
+        "history": game_data["history"],
+        "wallet": game_data["user_wallets"]["user123"]
+    })
 
-# Bet lagane ki API
 @app.route('/api/place-bet', methods=['POST'])
 def place_bet():
     data = request.json
-    game_data['current_bets'].append(data)
-    return jsonify({"success": True})
+    color = data.get('color')
+    amount = int(data.get('amount', 0))
+    user_id = data.get('user_id', 'user123')
+    
+    current_period, current_timer = update_and_get_state()
+    
+    # Aakhri 5 seconds mein betting block karne ke liye rule
+    if current_timer <= 5:
+        return jsonify({"success": False, "message": "Time khatam! Agle round ka wait karein."})
+        
+    if game_data["user_wallets"][user_id] < amount:
+        return jsonify({"success": False, "message": "Wallet me balance kam hai!"})
+        
+    # Wallet se amount deduct karo
+    game_data["user_wallets"][user_id] -= amount
+    
+    # Bet data ko save karo
+    if current_period not in game_data["user_bets"]:
+        game_data["user_bets"][current_period] = {}
+        
+    game_data["user_bets"][current_period][user_id] = {"color": color, "amount": amount}
+    
+    return jsonify({"success": True, "new_balance": game_data["user_wallets"][user_id]})
 
-# Admin Control Panel URL: Yahan se aap result badal sakte hain
-# Example URL: ://onrender.com
 @app.route('/admin/control', methods=['GET'])
 def admin_control():
     color = request.args.get('color')
     if color in ['red', 'green', 'violet']:
         game_data['admin_choice'] = color
-        return f"Success! Next winning color forced to: {color.upper()}"
+        return f"Success! Next round color set to: {color.upper()}"
     return "Invalid color! Use red, green, or violet."
 
-# Background calculation simulator jo live cloud server par timer chalayega
-def run_timer_loop():
-    while True:
-        time.sleep(1)
-        if game_data['timer'] > 0:
-            game_data['timer'] -= 1
-        else:
-            # Jab timer 0 hoga toh result announce hoga
-            if game_data['admin_choice']:
-                win_color = game_data['admin_choice']
-                game_data['admin_choice'] = None # Override reset
-            else:
-                win_color = random.choice(['red', 'green', 'violet'])
-                
-            game_data['history'].append({"period": game_data['period'], "result": win_color})
-            game_data['period'] += 1
-            game_data['timer'] = 30 # Timer resets to 30s
-            game_data['current_bets'] = []
-
-# Background thread starter
-import threading
-threading.Thread(target=run_timer_loop, daemon=True).start()
-
 if __name__ == '__main__':
-    # Render port mapping configuration
     import os
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
