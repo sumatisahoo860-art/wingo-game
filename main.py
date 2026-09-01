@@ -4,7 +4,7 @@ from flask import Flask, render_template_string, jsonify, request
 
 app = Flask(__name__)
 
-# Game memory storage configuration
+# Core system memory database
 game_data = {
     "start_period": 20260901001,
     "start_time": time.time(),
@@ -14,7 +14,6 @@ game_data = {
     "user_bets": {}               
 }
 
-# Clear logic for matching colors and numbers
 def get_color_for_number(num):
     if num == 0 or num == 5:
         return 'violet'
@@ -198,4 +197,5 @@ HTML_UI = """
                 if(data.success) {
                     document.getElementById('balance').innerText = data.new_balance;
                     alert(`Bet added: ${choice.toUpperCase()} pe ${amount} Coins lag gye!`);
-                    
+                } else {
+                
