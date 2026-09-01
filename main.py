@@ -4,49 +4,46 @@ from flask import Flask, render_template_string, jsonify, request
 
 app = Flask(__name__)
 
-# Game memory data
+# Game memory storage configuration
 game_data = {
     "start_period": 20260901001,
     "start_time": time.time(),
     "history": [],
     "admin_choice": None,
-    "user_wallets": {"user123": 10000}, # Default dummy user wallet
-    "user_bets": {} # Structure: {period_id: {user_id: {"color": color, "amount": amount}}}
+    "user_wallets": {"user123": 10000}, 
+    "user_bets": {} # Structure: {period_id: {user_id: [{"color": c, "amount": a}]}}
 }
 
-# Is function se har refresh par timer, period aur purani bets automatic settle hoti hain
 def update_and_get_state():
     current_time = time.time()
     elapsed_time = current_time - game_data["start_time"]
     
-    # 30 seconds ka ek round hai
     rounds_passed = int(elapsed_time // 30)
     current_timer = 30 - int(elapsed_time % 30)
     current_period = game_data["start_period"] + rounds_passed
     
-    # Agar naye rounds pass hue hain, toh pichle sabhi rounds ka result calculate karo
     last_calculated_period = game_data["start_period"] + len(game_data["history"])
     
     while last_calculated_period < current_period:
-        # Check agar admin ne koi result force kiya tha
         if game_data["admin_choice"]:
             win_color = game_data["admin_choice"]
-            game_data["admin_choice"] = None # Reset override after use
+            game_data["admin_choice"] = None 
         else:
-            # Sahi random generation jo sirf violet nahi dega
             win_color = random.choice(['red', 'green', 'violet'])
         
-        # Is period ke results ko history mein daalo
         game_data["history"].append({"period": last_calculated_period, "result": win_color})
         
-        # Pata karo ki kis user ne is round mein bet lagayi thi aur use paise do
+        # FIXED: Har ek bet par individual profit loop chalega
         if last_calculated_period in game_data["user_bets"]:
-            for user_id, bet_info in game_data["user_bets"][last_calculated_period].items():
-                if bet_info["color"] == win_color:
-                    # Multiplier ratio
-                    multiplier = 4.5 if win_color == 'violet' else 2.0
-                    winnings = int(bet_info["amount"] * multiplier)
-                    game_data["user_wallets"][user_id] += winnings
+            for user_id, bets_list in game_data["user_bets"][last_calculated_period].items():
+                total_winnings = 0
+                for bet_info in bets_list:
+                    if bet_info["color"] == win_color:
+                        multiplier = 4.5 if win_color == 'violet' else 2.0
+                        total_winnings += int(bet_info["amount"] * multiplier)
+                
+                # Sabhi winning bets ka total ek sath wallet me add hoga
+                game_data["user_wallets"][user_id] += total_winnings
         
         last_calculated_period += 1
         
@@ -115,7 +112,6 @@ HTML_UI = """
                     document.getElementById('time-left').innerText = data.timer;
                     document.getElementById('balance').innerText = data.wallet;
                     
-                    // Naya round shuru hote hi screen par alert aayega
                     if(lastLoggedPeriod && data.period !== lastLoggedPeriod && data.history.length > 0) {
                         let lastResult = data.history[data.history.length - 1];
                         alert(`Round ${lastResult.period} Ended! Winner color is: ${lastResult.result.toUpperCase()}`);
@@ -123,7 +119,6 @@ HTML_UI = """
                     lastLoggedPeriod = data.period;
                     
                     let historyHtml = '';
-                    // Sirf aakhri 7 results list mein dikhane ke liye
                     let displayHistory = [...data.history].reverse().slice(0, 7);
                     displayHistory.forEach(item => {
                         let colorClass = item.result === 'green' ? 'green' : (item.result === 'red' ? 'red' : 'violet');
@@ -135,6 +130,8 @@ HTML_UI = """
 
         function placeBet(color) {
             let amount = parseInt(document.getElementById('bet-amount').value);
+            let currentBalance = parseInt(document.getElementById('balance').innerText);
+            if(amount > currentBalance) { alert("Wallet me balance kam hai!"); return; }
             
             fetch('/api/place-bet', {
                 method: 'POST',
@@ -145,7 +142,7 @@ HTML_UI = """
             .then(data => {
                 if(data.success) {
                     document.getElementById('balance').innerText = data.new_balance;
-                    alert("Bet successful on " + color.toUpperCase());
+                    alert(`Bet added: ${color.toUpperCase()} pe ${amount} Coins lag gye!`);
                 } else {
                     alert(data.message);
                 }
@@ -182,21 +179,22 @@ def place_bet():
     
     current_period, current_timer = update_and_get_state()
     
-    # Aakhri 5 seconds mein betting block karne ke liye rule
     if current_timer <= 5:
         return jsonify({"success": False, "message": "Time khatam! Agle round ka wait karein."})
         
     if game_data["user_wallets"][user_id] < amount:
         return jsonify({"success": False, "message": "Wallet me balance kam hai!"})
         
-    # Wallet se amount deduct karo
     game_data["user_wallets"][user_id] -= amount
     
-    # Bet data ko save karo
     if current_period not in game_data["user_bets"]:
         game_data["user_bets"][current_period] = {}
         
-    game_data["user_bets"][current_period][user_id] = {"color": color, "amount": amount}
+    if user_id not in game_data["user_bets"][current_period]:
+        game_data["user_bets"][current_period][user_id] = []
+        
+    # Append list fixed: Ab har ek transaction save hogi alag se
+    game_data["user_bets"][current_period][user_id].append({"color": color, "amount": amount})
     
     return jsonify({"success": True, "new_balance": game_data["user_wallets"][user_id]})
 
