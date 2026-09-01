@@ -4,7 +4,7 @@ from flask import Flask, render_template_string, jsonify, request
 
 app = Flask(__name__)
 
-# Game memory storage configuration
+# Core game data memory storage
 game_data = {
     "start_period": 20260901001,
     "start_time": time.time(),
@@ -14,7 +14,7 @@ game_data = {
     "user_bets": {}               
 }
 
-# Fixed: Clear logic for matching colors and numbers
+# Fixed mapping function for colors and numbers
 def get_color_for_number(num):
     if num in:
         return 'violet'
@@ -88,47 +88,34 @@ HTML_UI = """
         .balance-box { font-size: 24px; font-weight: bold; margin: 15px 0; color: #333; }
         .game-info { display: flex; justify-content: space-between; background: #fdf2e9; padding: 10px; border-radius: 8px; margin: 15px 0; border: 1px solid #ffeb3b; }
         .timer { font-size: 20px; font-weight: bold; color: #ff5722; }
-        
         .bet-buttons { display: flex; justify-content: space-around; margin: 15px 0; }
-        .btn { padding: 12px 25px; font-size: 16px; border: none; border-radius: 25px; color: white; font-weight: bold; cursor: pointer; transition: 0.2s; width: 28%; }
-        .green { background: #4caf50; box-shadow: 0 4px #2e7d32; }
-        .violet { background: #9c27b0; box-shadow: 0 4px #6a1b9a; }
-        .red { background: #f44336; box-shadow: 0 4px #c62828; }
-        
+        .btn { padding: 12px 25px; font-size: 16px; border: none; border-radius: 25px; color: white; font-weight: bold; cursor: pointer; width: 28%; }
+        .green { background: #4caf50; } .violet { background: #9c27b0; } .red { background: #f44336; }
         .number-grid { display: grid; grid-template-columns: repeat(5, 1fr); gap: 8px; margin: 15px 0; }
         .num-btn { padding: 12px; font-size: 16px; font-weight: bold; border: none; border-radius: 8px; color: white; cursor: pointer; }
-        .n0, .n5 { background: #9c27b0; } 
-        .n1, .n3, .n7, .n9 { background: #4caf50; } 
-        .n2, .n4, .n6, .n8 { background: #f44336; } 
-        
-        .btn:active, .num-btn:active { transform: translateY(2px); box-shadow: none; }
+        .n0, .n5 { background: #9c27b0; } .n1, .n3, .n7, .n9 { background: #4caf50; } .n2, .n4, .n6, .n8 { background: #f44336; }
         .input-box { width: 80%; padding: 10px; font-size: 16px; border-radius: 8px; border: 1px solid #ccc; text-align: center; margin-bottom: 10px; }
-        .history { text-align: left; background: #fafafa; padding: 10px; border-radius: 8px; margin-top: 20px; border: 1px solid #eee; }
+        .history { text-align: left; background: #fafafa; padding: 10px; border-radius: 8px; margin-top: 20px; }
         .history-item { display: flex; justify-content: space-between; padding: 8px; border-bottom: 1px solid #eee; align-items: center; }
-        .badge { padding: 4px 10px; border-radius: 4px; color: white; font-weight: bold; text-transform: uppercase; font-size: 12px; }
+        .badge { padding: 4px 10px; border-radius: 4px; color: white; font-weight: bold; }
         .num-circle { display: inline-block; width: 24px; height: 24px; border-radius: 50%; background: #333; color: white; text-align: center; line-height: 24px; font-weight: bold; margin-left: 5px; }
     </style>
 </head>
 <body>
     <div class="app-container">
         <div class="header">🎮 WINGO COLOR & NUMBER</div>
-        
         <div class="balance-box">🪙 Wallet: <span id="balance">10000</span> Coins</div>
-        
         <div class="game-info">
             <div>Period: <br><strong id="period-id">-</strong></div>
             <div class="timer">Time Left: <br><span id="time-left">30</span>s</div>
         </div>
-
         <h3>Enter Amount to Bet:</h3>
         <input type="number" id="bet-amount" class="input-box" value="100" min="10">
-        
         <div class="bet-buttons">
             <button class="btn green" onclick="placeBet('color', 'green')">Green</button>
             <button class="btn violet" onclick="placeBet('color', 'violet')">Violet</button>
             <button class="btn red" onclick="placeBet('color', 'red')">Red</button>
         </div>
-
         <h3>Select Number (9x Profit):</h3>
         <div class="number-grid">
             <button class="num-btn n0" onclick="placeBet('number', '0')">0</button>
@@ -142,16 +129,13 @@ HTML_UI = """
             <button class="num-btn n8" onclick="placeBet('number', '8')">8</button>
             <button class="num-btn n9" onclick="placeBet('number', '9')">9</button>
         </div>
-
         <div class="history">
             <h4>📜 Last Game Results</h4>
             <div id="history-logs">Loading...</div>
         </div>
     </div>
-
     <script>
         let lastLoggedPeriod = null;
-
         function updateStatus() {
             fetch('/api/game-status')
                 .then(res => res.json())
@@ -159,43 +143,59 @@ HTML_UI = """
                     document.getElementById('period-id').innerText = data.period;
                     document.getElementById('time-left').innerText = data.timer;
                     document.getElementById('balance').innerText = data.wallet;
-                    
                     if(lastLoggedPeriod && data.period !== lastLoggedPeriod && data.history.length > 0) {
                         let lastResult = data.history[data.history.length - 1];
                         alert(`Round ${lastResult.period} Ended! Winner: ${lastResult.result_color.toUpperCase()} (Number ${lastResult.result_number})`);
                     }
                     lastLoggedPeriod = data.period;
-                    
                     let historyHtml = '';
                     let displayHistory = [...data.history].reverse().slice(0, 7);
                     displayHistory.forEach(item => {
                         let colorClass = item.result_color === 'green' ? 'green' : (item.result_color === 'red' ? 'red' : 'violet');
-                        historyHtml += `
-                            <div class="history-item">
-                                <span>ID: ${item.period}</span> 
-                                <div>
-                                    <span class="badge ${colorClass}">${item.result_color}</span>
-                                    <span class="num-circle">${item.result_number}</span>
-                                </div>
-                            </div>`;
+                        historyHtml += `<div class="history-item"><span>ID: ${item.period}</span><div><span class="badge ${colorClass}">${item.result_color}</span><span class="num-circle">${item.result_number}</span></div></div>`;
                     });
                     document.getElementById('history-logs').innerHTML = historyHtml || 'No data';
                 });
         }
-
         function placeBet(type, choice) {
             let amount = parseInt(document.getElementById('bet-amount').value);
-            let currentBalance = parseInt(document.getElementById('balance').innerText);
-            if(amount > currentBalance) { alert("Wallet me balance kam hai!"); return; }
-            
             fetch('/api/place-bet', {
                 method: 'POST',
                 headers: {'Content-Type': 'application/json'},
                 body: JSON.stringify({ type: type, choice: choice, amount: amount, user_id: 'user123' })
-            })
-            .then(res => res.json())
-            .then(data => {
+            }).then(res => res.json()).then(data => {
                 if(data.success) {
                     document.getElementById('balance').innerText = data.new_balance;
-                    alert(`Bet added: ${choice.toUpperCase()} pe ${amount} Coins lag gye!`);
-                    
+                    alert(`Bet added on ${choice.toUpperCase()} for ${amount} Coins!`);
+                } else { alert(data.message); }
+            });
+        }
+        setInterval(updateStatus, 1000);
+        updateStatus();
+    </script>
+</body>
+</html>
+"""
+
+@app.route('/')
+def home():
+    return render_template_string(HTML_UI)
+
+@app.route('/api/game-status', methods=['GET'])
+def get_status():
+    current_period, current_timer = update_and_get_state()
+    return jsonify({
+        "period": current_period,
+        "timer": current_timer,
+        "history": game_data["history"],
+        "wallet": game_data["user_wallets"]["user123"]
+    })
+
+@app.route('/api/place-bet', methods=['POST'])
+def place_bet():
+    data = request.json
+    bet_type = data.get('type')    
+    choice = data.get('choice')    
+    amount = int(data.get('amount', 0))
+    user_id = data.get('user_id', 'user123')
+
